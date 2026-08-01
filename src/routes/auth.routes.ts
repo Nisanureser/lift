@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia'
 import * as authController from '../controllers/auth.controller'
+import { ErrorResponse } from '../dtos/common.dto'
 import {
   AuthCookieSchema,
   AuthResponse,
@@ -12,8 +13,6 @@ import {
 } from '../dtos/auth.dto'
 import { authGuard, jwtPlugin } from '../middlewares/auth.middleware'
 
-const tokenErrorResponse = t.Object({ error: t.String(), code: t.Optional(t.String()) })
-
 // Auth endpoint'lerini controller'lara baglayan route grubu
 export const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
   .use(jwtPlugin)
@@ -22,8 +21,8 @@ export const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
     cookie: AuthCookieSchema,
     response: {
       201: AuthResponse,
-      409: tokenErrorResponse,
-      422: tokenErrorResponse,
+      409: ErrorResponse,
+      422: ErrorResponse,
     },
     detail: {
       summary: '/auth/register',
@@ -36,8 +35,8 @@ export const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
     cookie: AuthCookieSchema,
     response: {
       200: AuthResponse,
-      401: tokenErrorResponse,
-      422: tokenErrorResponse,
+      401: ErrorResponse,
+      422: ErrorResponse,
     },
     detail: {
       summary: '/auth/login',
@@ -53,8 +52,8 @@ export const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
       cookie: AuthCookieSchema,
       response: {
         200: AuthSessionResponse,
-        401: tokenErrorResponse,
-        422: tokenErrorResponse,
+        401: ErrorResponse,
+        422: ErrorResponse,
       },
       detail: {
         summary: '/auth/refresh',
@@ -72,7 +71,7 @@ export const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
       cookie: AuthCookieSchema,
       response: {
         200: AuthSessionResponse,
-        401: tokenErrorResponse,
+        401: ErrorResponse,
       },
       detail: {
         summary: '/auth/logout',
@@ -85,7 +84,7 @@ export const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
   .get('/me', authController.me, {
     response: {
       200: t.Object({ user: UserResponse }),
-      401: tokenErrorResponse,
+      401: ErrorResponse,
     },
     detail: {
       summary: '/auth/me',
