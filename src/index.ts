@@ -1,15 +1,17 @@
 import { Elysia, t } from 'elysia'
 import { cors } from '@elysiajs/cors'
-import { join } from 'node:path'
 import { sql } from 'drizzle-orm'
 import { validateEnv, env } from './config/env'
 import { db } from './database'
 import { authGuard } from './middlewares/auth.middleware'
 import { swaggerPlugin } from './plugins/swagger'
 import { apiRoutes } from './routes'
+import { ensureStorageBucket, getObjectBytes } from './services/storage.service'
 import { AppError, toErrorResponse } from './utils/errors.util'
+import { sanitizeObjectKey } from './utils/file.util'
 
 validateEnv()
+await ensureStorageBucket()
 
 // Lift API ana uygulama instance'i; plugin ve route'lari birlestirir
 const app = new Elysia()
@@ -41,15 +43,22 @@ const app = new Elysia()
   .use(
     new Elysia().use(authGuard).get('/uploads/*', async ({ request, set }) => {
       const url = new URL(request.url)
-      const filePath = url.pathname.replace('/uploads/', '')
-      const file = Bun.file(join(env.UPLOAD_DIR, filePath))
+      const objectKey = sanitizeObjectKey(url.pathname.replace('/uploads/', ''))
 
-      if (!(await file.exists())) {
+      if (!objectKey) {
+        set.status = 400
+        return { error: 'Invalid file path' }
+      }
+
+      const object = await getObjectBytes(objectKey)
+
+      if (!object) {
         set.status = 404
         return { error: 'File not found' }
       }
 
-      return file
+      set.headers['Content-Type'] = object.contentType
+      return object.body
     }),
   )
   .use(apiRoutes)

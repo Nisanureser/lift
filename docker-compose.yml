@@ -1,0 +1,38 @@
+# MinIO object storage - urun fotograflari icin S3 uyumlu depo
+# Kullanim: docker compose up -d
+# Console: http://localhost:9001 (MINIO_ROOT_USER / MINIO_ROOT_PASSWORD)
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: lift-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: lift-minio-init
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do
+        echo 'MinIO bekleniyor...';
+        sleep 2;
+      done;
+      mc mb local/lift-uploads --ignore-existing;
+      mc anonymous set none local/lift-uploads;
+      echo 'Bucket hazir: lift-uploads';
+      "
+
+volumes:
+  minio_data:

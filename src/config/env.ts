@@ -13,13 +13,17 @@ export const env = {
       (process.env.NODE_ENV ?? 'development') === 'production'),
   COOKIE_SAME_SITE: (process.env.COOKIE_SAME_SITE ?? 'lax') as 'lax' | 'strict' | 'none',
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN ?? '',
-  UPLOAD_DIR: process.env.UPLOAD_DIR ?? 'uploads',
   PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL ?? 'http://localhost:3000',
+  S3_ENDPOINT: process.env.S3_ENDPOINT ?? 'http://localhost:9000',
+  S3_ACCESS_KEY: process.env.S3_ACCESS_KEY ?? 'minioadmin',
+  S3_SECRET_KEY: process.env.S3_SECRET_KEY ?? 'minioadmin',
+  S3_BUCKET: process.env.S3_BUCKET ?? 'lift-uploads',
+  S3_REGION: process.env.S3_REGION ?? 'us-east-1',
 } as const
 
 // Eksik kritik env degiskenlerini erken tespit eder
 export function validateEnv(): void {
-  const required = ['DATABASE_URL', 'JWT_SECRET'] as const
+  const required = ['DATABASE_URL', 'JWT_SECRET', 'S3_ENDPOINT', 'S3_ACCESS_KEY', 'S3_SECRET_KEY', 'S3_BUCKET'] as const
 
   for (const key of required) {
     if (!env[key]) {

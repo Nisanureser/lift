@@ -1,7 +1,4 @@
 import { and, count, desc, eq, ilike, or } from 'drizzle-orm'
-import { unlink } from 'node:fs/promises'
-import { join } from 'node:path'
-import { env } from '../config/env'
 import { ERROR_CODES } from '../constants/error-codes'
 import { MAX_IMAGES_PER_PRODUCT, PRODUCT_UNITS, type ProductUnit } from '../constants/product.constants'
 import { db } from '../database'
@@ -15,9 +12,15 @@ import type {
   UpdateProductInput,
 } from '../types/product.types'
 import { ensureActiveCategory, getCategoryOrThrow } from './category.service'
+import { deleteObject, uploadObject } from './storage.service'
 import { parseStockQuantity, stockIn } from './stock.service'
 import { AppError } from '../utils/errors.util'
-import { buildImageFileName, ensureProductUploadDir, toPublicFileUrl, validateImageFile } from '../utils/file.util'
+import {
+  buildImageFileName,
+  buildProductObjectKey,
+  toPublicFileUrl,
+  validateImageFile,
+} from '../utils/file.util'
 
 // DB fotograf kaydini API yanit formatina cevirir
 function toImageDto(image: typeof productImages.$inferSelect): ProductImageDto {
@@ -296,24 +299,22 @@ export async function deleteProduct(id: string): Promise<void> {
   await Promise.all(
     images.map(async (image) => {
       try {
-        await unlink(join(env.UPLOAD_DIR, image.filePath))
+        await deleteObject(image.filePath)
       } catch {
-        // Dosya zaten silinmis olabilir
+        // Nesne zaten silinmis olabilir
       }
     }),
   )
 }
 
-// Uruna tek fotograf kaydeder
+// Uruna tek fotograf kaydeder ve MinIO'ya yukler
 async function saveProductImage(productId: string, file: File, isPrimary: boolean): Promise<void> {
   validateImageFile(file)
 
   const fileName = buildImageFileName(file.name)
-  const relativePath = join('products', productId, fileName)
-  const absolutePath = join(env.UPLOAD_DIR, relativePath)
+  const objectKey = buildProductObjectKey(productId, fileName)
 
-  await ensureProductUploadDir(productId)
-  await Bun.write(absolutePath, file)
+  await uploadObject(objectKey, new Uint8Array(await file.arrayBuffer()), file.type)
 
   if (isPrimary) {
     await db
@@ -334,7 +335,7 @@ async function saveProductImage(productId: string, file: File, isPrimary: boolea
     .values({
       productId,
       fileName,
-      filePath: relativePath.replace(/\\/g, '/'),
+      filePath: objectKey,
       mimeType: file.type,
       isPrimary,
       sortOrder: nextSortOrder,
@@ -403,8 +404,8 @@ async function deleteProductImage(productId: string, imageId: string): Promise<v
   await db.delete(productImages).where(eq(productImages.id, imageId))
 
   try {
-    await unlink(join(env.UPLOAD_DIR, image.filePath))
+    await deleteObject(image.filePath)
   } catch {
-    // Dosya zaten silinmis olabilir
+    // Nesne zaten silinmis olabilir
   }
 }

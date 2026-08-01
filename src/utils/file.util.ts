@@ -1,6 +1,4 @@
 import { randomUUID } from 'crypto'
-import { mkdir } from 'node:fs/promises'
-import { join } from 'node:path'
 import { env } from '../config/env'
 import {
   ALLOWED_IMAGE_MIMES,
@@ -9,17 +7,15 @@ import {
 import { ERROR_CODES } from '../constants/error-codes'
 import { AppError } from './errors.util'
 
-// Yuklenen dosyanin public URL'ini olusturur
-export function toPublicFileUrl(relativePath: string): string {
-  const normalized = relativePath.replace(/^\/+/, '')
-  return `${env.PUBLIC_BASE_URL}/uploads/${normalized}`
+// S3 object key icin urun fotograf yolunu olusturur
+export function buildProductObjectKey(productId: string, fileName: string): string {
+  return `products/${productId}/${fileName}`
 }
 
-// Upload klasorunu urun bazinda hazirlar
-export async function ensureProductUploadDir(productId: string): Promise<string> {
-  const dir = join(env.UPLOAD_DIR, 'products', productId)
-  await mkdir(dir, { recursive: true })
-  return dir
+// Proxy uzerinden erisilecek public URL'i olusturur
+export function toPublicFileUrl(objectKey: string): string {
+  const normalized = objectKey.replace(/^\/+/, '')
+  return `${env.PUBLIC_BASE_URL}/uploads/${normalized}`
 }
 
 // Yuklenen fotograf dosyasini dogrular
@@ -37,4 +33,15 @@ export function validateImageFile(file: File): void {
 export function buildImageFileName(originalName: string): string {
   const extension = originalName.split('.').pop()?.toLowerCase() ?? 'jpg'
   return `${Date.now()}-${randomUUID().slice(0, 8)}.${extension}`
+}
+
+// Upload proxy path traversal saldirilarini engeller
+export function sanitizeObjectKey(rawPath: string): string | null {
+  const normalized = rawPath.replace(/^\/+/, '').replace(/\\/g, '/')
+
+  if (!normalized || normalized.includes('..') || normalized.startsWith('/')) {
+    return null
+  }
+
+  return normalized
 }
