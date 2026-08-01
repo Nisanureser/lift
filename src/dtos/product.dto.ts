@@ -76,7 +76,7 @@ export const ProductListQuery = t.Object({
   limit: t.Optional(t.Numeric({ minimum: 1, maximum: 50, default: 20 })),
   categoryId: t.Optional(t.String({ minLength: 1 })),
   search: t.Optional(t.String({ minLength: 1 })),
-  isActive: t.Optional(t.Boolean()),
+  isActive: t.Optional(t.Union([t.Boolean(), t.BooleanString()])),
 })
 
 // Urun ID path param semasi

@@ -194,7 +194,11 @@ export async function listProducts(filters: ProductListFilters): Promise<{
       .orderBy(desc(products.createdAt))
       .limit(limit)
       .offset(offset),
-    db.select({ total: count() }).from(products).where(whereClause),
+    db
+      .select({ total: count() })
+      .from(products)
+      .innerJoin(categories, eq(products.categoryId, categories.id))
+      .where(whereClause),
   ])
 
   const totalCount = Number(countResult[0]?.total ?? 0)
