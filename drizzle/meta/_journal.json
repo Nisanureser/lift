@@ -15,6 +15,13 @@
       "when": 1785574920955,
       "tag": "0001_new_swarm",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785577357268,
+      "tag": "0002_conscious_silvermane",
+      "breakpoints": true
     }
   ]
 }

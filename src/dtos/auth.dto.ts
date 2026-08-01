@@ -53,4 +53,30 @@ export const JwtPayload = t.Object({
   userId: t.String(),
   email: t.String({ format: 'email' }),
   username: t.String(),
+  jti: t.String(),
+})
+
+// Refresh endpoint body semasi
+export const RefreshBody = t.Object({
+  refreshToken: t.String({ minLength: 32 }),
+})
+
+// Logout endpoint body semasi
+export const LogoutBody = t.Object({
+  refreshToken: t.String({ minLength: 32 }),
+})
+
+// Auth token yanit semasi
+export const AuthTokensResponse = t.Object({
+  accessToken: t.String(),
+  refreshToken: t.String(),
+  token: t.String(),
+})
+
+// Register/login yanit semasi
+export const AuthResponse = t.Object({
+  user: UserResponse,
+  accessToken: t.String(),
+  refreshToken: t.String(),
+  token: t.String(),
 })
