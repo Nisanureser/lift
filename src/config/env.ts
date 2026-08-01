@@ -7,6 +7,8 @@ export const env = {
   JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? '*',
+  UPLOAD_DIR: process.env.UPLOAD_DIR ?? 'uploads',
+  PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL ?? 'http://localhost:3000',
 } as const
 
 // Eksik kritik env degiskenlerini erken tespit eder

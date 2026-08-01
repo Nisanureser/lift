@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia'
 import { cors } from '@elysiajs/cors'
+import { join } from 'node:path'
 import { sql } from 'drizzle-orm'
 import { validateEnv, env } from './config/env'
 import { db } from './database'
@@ -19,6 +20,18 @@ const app = new Elysia()
   )
   .use(swaggerPlugin)
   .decorate('db', db)
+  .get('/uploads/*', async ({ request, set }) => {
+    const url = new URL(request.url)
+    const filePath = url.pathname.replace('/uploads/', '')
+    const file = Bun.file(join(env.UPLOAD_DIR, filePath))
+
+    if (!(await file.exists())) {
+      set.status = 404
+      return { error: 'File not found' }
+    }
+
+    return file
+  })
   .get(
     '/health',
     async () => {

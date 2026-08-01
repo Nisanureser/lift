@@ -8,7 +8,11 @@ export const swaggerPlugin = swagger({
       version: '1.0.0',
       description: 'Lift projesi REST API - Elysia + Bun + PostgreSQL + Drizzle',
     },
-    tags: [{ name: 'auth', description: 'Kimlik dogrulama islemleri' }],
+    tags: [
+      { name: 'auth', description: 'Kimlik dogrulama islemleri' },
+      { name: 'categories', description: 'Urun kategori islemleri' },
+      { name: 'products', description: 'Urun katalog islemleri' },
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {
