@@ -111,7 +111,6 @@ export async function logout({
     const accessToken = getAccessToken(
       request.headers.get('cookie'),
       request.headers.get('authorization'),
-      cookie,
     )
 
     let accessJti: string | undefined

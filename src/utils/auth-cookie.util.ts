@@ -67,14 +67,12 @@ export function getRefreshToken(cookie: AuthCookieJar, bodyToken?: string): stri
   return cookie[REFRESH_TOKEN_COOKIE].value ?? bodyToken ?? null
 }
 
-// Cookie jar, Cookie header veya Bearer header'dan access token okur
+// Cookie header veya Bearer header'dan access token okur
 export function getAccessToken(
   cookieHeader: string | null,
   authorization: string | null,
-  cookie?: AuthCookieJar,
 ): string | null {
-  const cookieValue =
-    cookie?.[ACCESS_TOKEN_COOKIE]?.value ?? readCookieHeader(cookieHeader, ACCESS_TOKEN_COOKIE)
+  const cookieValue = readCookieHeader(cookieHeader, ACCESS_TOKEN_COOKIE)
 
   if (cookieValue) {
     return cookieValue

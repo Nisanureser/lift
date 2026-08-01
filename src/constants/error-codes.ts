@@ -23,5 +23,3 @@ export const ERROR_CODES = {
   STOCK_MOVEMENT_FAILED: 'STOCK_MOVEMENT_FAILED',
   INVALID_UNIT: 'INVALID_UNIT',
 } as const
-
-export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES]

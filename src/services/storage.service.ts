@@ -19,31 +19,29 @@ const s3Client = new S3Client({
   forcePathStyle: true,
 })
 
-// MinIO/S3 baglantisi kurulana kadar belirli araliklarla yeniden dener
-async function waitForStorage(maxAttempts = 15, delayMs = 2000): Promise<void> {
+// Hata nesnesinin baglanti/kaynak ulasilamazligi olup olmadigini kontrol eder
+function isConnectionError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    ('code' in error
+      ? error.code === 'ECONNREFUSED' || error.code === 'NetworkingError'
+      : error.message.includes('ECONNREFUSED'))
+  )
+}
+
+// Uygulama baslangicinda MinIO baglantisi ve bucket varligini garanti eder
+export async function ensureStorageBucket(maxAttempts = 15, delayMs = 2000): Promise<void> {
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       await s3Client.send(new HeadBucketCommand({ Bucket: env.S3_BUCKET }))
       return
     } catch (error) {
-      const isConnectionError =
-        error instanceof Error &&
-        ('code' in error
-          ? error.code === 'ECONNREFUSED' || error.code === 'NetworkingError'
-          : error.message.includes('ECONNREFUSED'))
-
-      if (!isConnectionError) {
+      if (!isConnectionError(error)) {
         try {
           await s3Client.send(new CreateBucketCommand({ Bucket: env.S3_BUCKET }))
           return
         } catch (createError) {
-          const createIsConnectionError =
-            createError instanceof Error &&
-            ('code' in createError
-              ? createError.code === 'ECONNREFUSED' || createError.code === 'NetworkingError'
-              : createError.message.includes('ECONNREFUSED'))
-
-          if (!createIsConnectionError) {
+          if (!isConnectionError(createError)) {
             throw createError
           }
         }
@@ -56,17 +54,10 @@ async function waitForStorage(maxAttempts = 15, delayMs = 2000): Promise<void> {
         )
       }
 
-      console.warn(
-        `MinIO bekleniyor (${attempt}/${maxAttempts})... ${env.S3_ENDPOINT}`,
-      )
+      console.warn(`MinIO bekleniyor (${attempt}/${maxAttempts})... ${env.S3_ENDPOINT}`)
       await Bun.sleep(delayMs)
     }
   }
-}
-
-// Uygulama baslangicinda bucket varligini garanti eder
-export async function ensureStorageBucket(): Promise<void> {
-  await waitForStorage()
 }
 
 // Dosyayi S3/MinIO bucket'ina yukler
