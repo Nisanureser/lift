@@ -9,6 +9,7 @@ import type {
   UpdateCategoryInput,
 } from '../types/category.types'
 import { AppError } from '../utils/errors.util'
+import { notDeleted, softDeleteFields } from '../utils/soft-delete.util'
 
 // DB kategori kaydini API yanit formatina cevirir
 function toCategoryDto(category: typeof categories.$inferSelect): CategoryDto {
@@ -24,7 +25,11 @@ function toCategoryDto(category: typeof categories.$inferSelect): CategoryDto {
 
 // ID ile kategori bulur; yoksa 404 firlatir
 export async function getCategoryOrThrow(id: string): Promise<typeof categories.$inferSelect> {
-  const [category] = await db.select().from(categories).where(eq(categories.id, id)).limit(1)
+  const [category] = await db
+    .select()
+    .from(categories)
+    .where(and(eq(categories.id, id), notDeleted(categories.deletedAt)))
+    .limit(1)
 
   if (!category) {
     throw new AppError('Category not found', 404, ERROR_CODES.CATEGORY_NOT_FOUND)
@@ -47,7 +52,7 @@ export async function createCategory(input: CreateCategoryInput): Promise<Catego
   const [existing] = await db
     .select({ id: categories.id })
     .from(categories)
-    .where(eq(categories.name, input.name))
+    .where(and(eq(categories.name, input.name), notDeleted(categories.deletedAt)))
     .limit(1)
 
   if (existing) {
@@ -79,7 +84,7 @@ export async function listCategories(filters: CategoryListFilters): Promise<{
   const limit = Number(filters.limit ?? 20)
   const offset = (page - 1) * limit
 
-  const conditions = []
+  const conditions = [notDeleted(categories.deletedAt)]
 
   if (filters.isActive !== undefined) {
     conditions.push(eq(categories.isActive, filters.isActive))
@@ -134,7 +139,7 @@ export async function updateCategory(id: string, input: UpdateCategoryInput): Pr
     const [existing] = await db
       .select({ id: categories.id })
       .from(categories)
-      .where(eq(categories.name, input.name))
+      .where(and(eq(categories.name, input.name), notDeleted(categories.deletedAt)))
       .limit(1)
 
     if (existing && existing.id !== id) {
@@ -150,7 +155,7 @@ export async function updateCategory(id: string, input: UpdateCategoryInput): Pr
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       updatedAt: new Date(),
     })
-    .where(eq(categories.id, id))
+    .where(and(eq(categories.id, id), notDeleted(categories.deletedAt)))
     .returning()
 
   if (!updated) {
@@ -167,11 +172,14 @@ export async function deleteCategory(id: string): Promise<void> {
   const countResult = await db
     .select({ total: count() })
     .from(products)
-    .where(eq(products.categoryId, id))
+    .where(and(eq(products.categoryId, id), notDeleted(products.deletedAt)))
 
   if (Number(countResult[0]?.total ?? 0) > 0) {
     throw new AppError('Category has linked products', 409, ERROR_CODES.CATEGORY_HAS_PRODUCTS)
   }
 
-  await db.delete(categories).where(eq(categories.id, id))
+  await db
+    .update(categories)
+    .set(softDeleteFields())
+    .where(and(eq(categories.id, id), notDeleted(categories.deletedAt)))
 }

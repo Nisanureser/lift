@@ -10,6 +10,7 @@ import type {
   UpdateCustomerInput,
 } from '../types/customer.types'
 import { AppError } from '../utils/errors.util'
+import { notDeleted, softDeleteFields } from '../utils/soft-delete.util'
 
 // DB musteri kaydini API yanit formatina cevirir
 function toCustomerDto(customer: typeof customers.$inferSelect): CustomerDto {
@@ -79,7 +80,7 @@ async function ensureUniqueNationalId(nationalId: string, excludeCustomerId?: st
   const [existing] = await db
     .select({ id: customers.id })
     .from(customers)
-    .where(eq(customers.nationalId, nationalId))
+    .where(and(eq(customers.nationalId, nationalId), notDeleted(customers.deletedAt)))
     .limit(1)
 
   if (existing && existing.id !== excludeCustomerId) {
@@ -92,7 +93,7 @@ async function ensureUniqueTaxNumber(taxNumber: string, excludeCustomerId?: stri
   const [existing] = await db
     .select({ id: customers.id })
     .from(customers)
-    .where(eq(customers.taxNumber, taxNumber))
+    .where(and(eq(customers.taxNumber, taxNumber), notDeleted(customers.deletedAt)))
     .limit(1)
 
   if (existing && existing.id !== excludeCustomerId) {
@@ -102,7 +103,11 @@ async function ensureUniqueTaxNumber(taxNumber: string, excludeCustomerId?: stri
 
 // ID ile musteri bulur; yoksa 404 firlatir
 export async function getCustomerOrThrow(id: string): Promise<typeof customers.$inferSelect> {
-  const [customer] = await db.select().from(customers).where(eq(customers.id, id)).limit(1)
+  const [customer] = await db
+    .select()
+    .from(customers)
+    .where(and(eq(customers.id, id), notDeleted(customers.deletedAt)))
+    .limit(1)
 
   if (!customer) {
     throw new AppError('Customer not found', 404, ERROR_CODES.CUSTOMER_NOT_FOUND)
@@ -182,7 +187,7 @@ export async function listCustomers(filters: CustomerListFilters): Promise<{
   const limit = Number(filters.limit ?? 20)
   const offset = (page - 1) * limit
 
-  const conditions = []
+  const conditions = [notDeleted(customers.deletedAt)]
 
   if (filters.type) {
     conditions.push(eq(customers.type, filters.type))
@@ -194,20 +199,22 @@ export async function listCustomers(filters: CustomerListFilters): Promise<{
 
   if (filters.search) {
     const term = `%${filters.search}%`
-    conditions.push(
-      or(
-        ilike(customers.firstName, term),
-        ilike(customers.lastName, term),
-        ilike(customers.nationalId, term),
-        ilike(customers.companyName, term),
-        ilike(customers.taxNumber, term),
-        ilike(customers.taxOffice, term),
-        ilike(customers.contactPersonName, term),
-        ilike(customers.phone, term),
-        ilike(customers.email, term),
-        ilike(sql`concat(${customers.firstName}, ' ', ${customers.lastName})`, term),
-      ),
+    const searchOr = or(
+      ilike(customers.firstName, term),
+      ilike(customers.lastName, term),
+      ilike(customers.nationalId, term),
+      ilike(customers.companyName, term),
+      ilike(customers.taxNumber, term),
+      ilike(customers.taxOffice, term),
+      ilike(customers.contactPersonName, term),
+      ilike(customers.phone, term),
+      ilike(customers.email, term),
+      ilike(sql`concat(${customers.firstName}, ' ', ${customers.lastName})`, term),
     )
+
+    if (searchOr) {
+      conditions.push(searchOr)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -303,7 +310,11 @@ export async function updateCustomer(id: string, input: UpdateCustomerInput): Pr
     }
   }
 
-  const [updated] = await db.update(customers).set(updates).where(eq(customers.id, id)).returning()
+  const [updated] = await db
+    .update(customers)
+    .set(updates)
+    .where(and(eq(customers.id, id), notDeleted(customers.deletedAt)))
+    .returning()
 
   if (!updated) {
     throw new AppError('Customer not found', 404, ERROR_CODES.CUSTOMER_NOT_FOUND)
@@ -312,18 +323,21 @@ export async function updateCustomer(id: string, input: UpdateCustomerInput): Pr
   return toCustomerDto(updated)
 }
 
-// Musteriyi siler; bagli tesis varsa engeller
+// Musteriyi soft delete ile siler; bagli tesis varsa engeller
 export async function deleteCustomer(id: string): Promise<void> {
   await getCustomerOrThrow(id)
 
   const countResult = await db
     .select({ total: count() })
     .from(sites)
-    .where(eq(sites.customerId, id))
+    .where(and(eq(sites.customerId, id), notDeleted(sites.deletedAt)))
 
   if (Number(countResult[0]?.total ?? 0) > 0) {
     throw new AppError('Customer has linked sites', 409, ERROR_CODES.CUSTOMER_HAS_SITES)
   }
 
-  await db.delete(customers).where(eq(customers.id, id))
+  await db
+    .update(customers)
+    .set(softDeleteFields())
+    .where(and(eq(customers.id, id), notDeleted(customers.deletedAt)))
 }

@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia'
 import * as customerController from '../controllers/customer.controller'
+import * as elevatorController from '../controllers/elevator.controller'
 import * as siteController from '../controllers/site.controller'
 import { ErrorResponse } from '../dtos/common.dto'
 import {
@@ -18,6 +19,14 @@ import {
   SiteResponse,
   UpdateSiteBody,
 } from '../dtos/site.dto'
+import {
+  CreateElevatorBody,
+  CustomerSiteElevatorParams,
+  ElevatorListQuery,
+  ElevatorListResponse,
+  ElevatorResponse,
+  UpdateElevatorBody,
+} from '../dtos/elevator.dto'
 import { authGuard } from '../middlewares/auth.middleware'
 
 const authSecurity = [{ bearerAuth: [] }, { cookieAuth: [] }] as Array<Record<string, string[]>>
@@ -121,9 +130,86 @@ export const customerRoutes = new Elysia({ prefix: '/customers', tags: ['custome
     },
     detail: {
       summary: '/customers/:id/sites/:siteId',
-      description: 'Tesisi siler. Giris gerekli.',
+      description: 'Tesisi soft delete ile siler; bagli asansorler de soft delete olur. Giris gerekli.',
       security: authSecurity,
       tags: ['sites'],
+    },
+  })
+  .get('/:id/sites/:siteId/elevators', elevatorController.list, {
+    params: CustomerSiteParams,
+    query: ElevatorListQuery,
+    response: {
+      200: ElevatorListResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/sites/:siteId/elevators',
+      description: 'Tesisin asansor listesini dondurur. Giris gerekli.',
+      security: authSecurity,
+      tags: ['elevators'],
+    },
+  })
+  .post('/:id/sites/:siteId/elevators', elevatorController.create, {
+    params: CustomerSiteParams,
+    body: CreateElevatorBody,
+    response: {
+      201: ElevatorResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+      409: ErrorResponse,
+      422: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/sites/:siteId/elevators',
+      description: 'Tesise yeni asansor ekler. Giris gerekli.',
+      security: authSecurity,
+      tags: ['elevators'],
+    },
+  })
+  .get('/:id/sites/:siteId/elevators/:elevatorId', elevatorController.getById, {
+    params: CustomerSiteElevatorParams,
+    response: {
+      200: ElevatorResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/sites/:siteId/elevators/:elevatorId',
+      description: 'Tesise ait tek asansor detayi. Giris gerekli.',
+      security: authSecurity,
+      tags: ['elevators'],
+    },
+  })
+  .patch('/:id/sites/:siteId/elevators/:elevatorId', elevatorController.update, {
+    params: CustomerSiteElevatorParams,
+    body: UpdateElevatorBody,
+    response: {
+      200: ElevatorResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+      409: ErrorResponse,
+      422: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/sites/:siteId/elevators/:elevatorId',
+      description: 'Asansor bilgilerini gunceller. Giris gerekli.',
+      security: authSecurity,
+      tags: ['elevators'],
+    },
+  })
+  .delete('/:id/sites/:siteId/elevators/:elevatorId', elevatorController.remove, {
+    params: CustomerSiteElevatorParams,
+    response: {
+      204: t.Void(),
+      401: ErrorResponse,
+      404: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/sites/:siteId/elevators/:elevatorId',
+      description: 'Asansoru soft delete ile siler. Giris gerekli.',
+      security: authSecurity,
+      tags: ['elevators'],
     },
   })
   .get('/:id', customerController.getById, {
@@ -165,7 +251,7 @@ export const customerRoutes = new Elysia({ prefix: '/customers', tags: ['custome
     },
     detail: {
       summary: '/customers/:id',
-      description: 'Musteriyi siler. Bagli tesis varsa engellenir. Giris gerekli.',
+      description: 'Musteriyi soft delete ile siler. Bagli tesis varsa engellenir. Giris gerekli.',
       security: authSecurity,
     },
   })

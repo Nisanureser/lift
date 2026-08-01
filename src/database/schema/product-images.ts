@@ -16,4 +16,5 @@ export const productImages = pgTable('product_images', {
   isPrimary: boolean('is_primary').default(false).notNull(),
   sortOrder: integer('sort_order').default(0).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
 })

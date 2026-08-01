@@ -13,6 +13,7 @@ export const swaggerPlugin = swagger({
       { name: 'categories', description: 'Urun kategori islemleri' },
       { name: 'customers', description: 'Bireysel ve kurumsal musteri islemleri' },
       { name: 'sites', description: 'Musteri tesis / bina islemleri' },
+      { name: 'elevators', description: 'Tesis asansor / cihaz islemleri' },
       { name: 'products', description: 'Urun katalog islemleri' },
     ],
     components: {

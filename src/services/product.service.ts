@@ -12,9 +12,10 @@ import type {
   UpdateProductInput,
 } from '../types/product.types'
 import { ensureActiveCategory, getCategoryOrThrow } from './category.service'
-import { deleteObject, uploadObject } from './storage.service'
+import { uploadObject } from './storage.service'
 import { parseStockQuantity, stockIn } from './stock.service'
 import { AppError } from '../utils/errors.util'
+import { notDeleted, softDeleteFields } from '../utils/soft-delete.util'
 import {
   buildImageFileName,
   buildProductObjectKey,
@@ -42,7 +43,7 @@ async function toProductDto(product: typeof products.$inferSelect): Promise<Prod
   const images = await db
     .select()
     .from(productImages)
-    .where(eq(productImages.productId, product.id))
+    .where(and(eq(productImages.productId, product.id), notDeleted(productImages.deletedAt)))
     .orderBy(desc(productImages.isPrimary), productImages.sortOrder)
 
   return {
@@ -69,7 +70,11 @@ async function toProductDto(product: typeof products.$inferSelect): Promise<Prod
 
 // ID ile urun bulur; yoksa 404 firlatir
 export async function getProductOrThrow(id: string): Promise<typeof products.$inferSelect> {
-  const [product] = await db.select().from(products).where(eq(products.id, id)).limit(1)
+  const [product] = await db
+    .select()
+    .from(products)
+    .where(and(eq(products.id, id), notDeleted(products.deletedAt)))
+    .limit(1)
 
   if (!product) {
     throw new AppError('Product not found', 404, ERROR_CODES.PRODUCT_NOT_FOUND)
@@ -83,7 +88,7 @@ async function ensureUniqueSku(sku: string, excludeProductId?: string): Promise<
   const [existing] = await db
     .select({ id: products.id })
     .from(products)
-    .where(eq(products.sku, sku))
+    .where(and(eq(products.sku, sku), notDeleted(products.deletedAt)))
     .limit(1)
 
   if (existing && existing.id !== excludeProductId) {
@@ -153,7 +158,7 @@ export async function listProducts(filters: ProductListFilters): Promise<{
   const limit = Number(filters.limit ?? 20)
   const offset = (page - 1) * limit
 
-  const conditions = []
+  const conditions = [notDeleted(products.deletedAt), notDeleted(categories.deletedAt)]
 
   if (filters.categoryId) {
     conditions.push(eq(products.categoryId, filters.categoryId))
@@ -164,13 +169,15 @@ export async function listProducts(filters: ProductListFilters): Promise<{
   }
 
   if (filters.search) {
-    conditions.push(
-      or(
-        ilike(products.name, `%${filters.search}%`),
-        ilike(products.sku, `%${filters.search}%`),
-        ilike(products.description, `%${filters.search}%`),
-      ),
+    const searchOr = or(
+      ilike(products.name, `%${filters.search}%`),
+      ilike(products.sku, `%${filters.search}%`),
+      ilike(products.description, `%${filters.search}%`),
     )
+
+    if (searchOr) {
+      conditions.push(searchOr)
+    }
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -197,7 +204,9 @@ export async function listProducts(filters: ProductListFilters): Promise<{
       const [primaryImage] = await db
         .select()
         .from(productImages)
-        .where(eq(productImages.productId, product.id))
+        .where(
+          and(eq(productImages.productId, product.id), notDeleted(productImages.deletedAt)),
+        )
         .orderBy(desc(productImages.isPrimary), productImages.sortOrder)
         .limit(1)
 
@@ -274,7 +283,7 @@ export async function updateProduct(
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       updatedAt: new Date(),
     })
-    .where(eq(products.id, id))
+    .where(and(eq(products.id, id), notDeleted(products.deletedAt)))
     .returning()
 
   if (!updated) {
@@ -288,23 +297,21 @@ export async function updateProduct(
   return getProductById(id)
 }
 
-// Urunu ve tum fotograflarini siler
+// Urunu ve tum fotograflarini soft delete ile siler
 export async function deleteProduct(id: string): Promise<void> {
   await getProductOrThrow(id)
 
-  const images = await db.select().from(productImages).where(eq(productImages.productId, id))
+  const now = new Date()
 
-  await db.delete(products).where(eq(products.id, id))
+  await db
+    .update(productImages)
+    .set({ deletedAt: now })
+    .where(and(eq(productImages.productId, id), notDeleted(productImages.deletedAt)))
 
-  await Promise.all(
-    images.map(async (image) => {
-      try {
-        await deleteObject(image.filePath)
-      } catch {
-        // Nesne zaten silinmis olabilir
-      }
-    }),
-  )
+  await db
+    .update(products)
+    .set(softDeleteFields())
+    .where(and(eq(products.id, id), notDeleted(products.deletedAt)))
 }
 
 // Uruna tek fotograf kaydeder ve MinIO'ya yukler
@@ -320,13 +327,13 @@ async function saveProductImage(productId: string, file: File, isPrimary: boolea
     await db
       .update(productImages)
       .set({ isPrimary: false })
-      .where(eq(productImages.productId, productId))
+      .where(and(eq(productImages.productId, productId), notDeleted(productImages.deletedAt)))
   }
 
   const countResult = await db
     .select({ total: count() })
     .from(productImages)
-    .where(eq(productImages.productId, productId))
+    .where(and(eq(productImages.productId, productId), notDeleted(productImages.deletedAt)))
 
   const nextSortOrder = Number(countResult[0]?.total ?? 0) + 1
 
@@ -356,7 +363,7 @@ async function uploadProductImages(productId: string, files: File[]): Promise<vo
   const existingCount = await db
     .select({ total: count() })
     .from(productImages)
-    .where(eq(productImages.productId, productId))
+    .where(and(eq(productImages.productId, productId), notDeleted(productImages.deletedAt)))
 
   const currentTotal = Number(existingCount[0]?.total ?? 0)
 
@@ -371,7 +378,13 @@ async function uploadProductImages(productId: string, files: File[]): Promise<vo
   const hasPrimaryRows = await db
     .select({ id: productImages.id })
     .from(productImages)
-    .where(and(eq(productImages.productId, productId), eq(productImages.isPrimary, true)))
+    .where(
+      and(
+        eq(productImages.productId, productId),
+        eq(productImages.isPrimary, true),
+        notDeleted(productImages.deletedAt),
+      ),
+    )
     .limit(1)
 
   let hasPrimaryImage = hasPrimaryRows.length > 0
@@ -389,23 +402,26 @@ async function uploadProductImages(productId: string, files: File[]): Promise<vo
   }
 }
 
-// Urun fotografini siler
+// Urun fotografini soft delete ile siler
 async function deleteProductImage(productId: string, imageId: string): Promise<void> {
   const [image] = await db
     .select()
     .from(productImages)
-    .where(and(eq(productImages.id, imageId), eq(productImages.productId, productId)))
+    .where(
+      and(
+        eq(productImages.id, imageId),
+        eq(productImages.productId, productId),
+        notDeleted(productImages.deletedAt),
+      ),
+    )
     .limit(1)
 
   if (!image) {
     throw new AppError('Product image not found', 404, ERROR_CODES.PRODUCT_IMAGE_NOT_FOUND)
   }
 
-  await db.delete(productImages).where(eq(productImages.id, imageId))
-
-  try {
-    await deleteObject(image.filePath)
-  } catch {
-    // Nesne zaten silinmis olabilir
-  }
+  await db
+    .update(productImages)
+    .set({ deletedAt: new Date() })
+    .where(eq(productImages.id, imageId))
 }

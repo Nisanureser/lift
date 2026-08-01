@@ -4,7 +4,9 @@ import { db } from '../database'
 import { sites } from '../database/schema'
 import type { CreateSiteInput, SiteDto, SiteListFilters, UpdateSiteInput } from '../types/site.types'
 import { getCustomerOrThrow } from './customer.service'
+import { softDeleteElevatorsBySite } from './elevator.service'
 import { AppError } from '../utils/errors.util'
+import { notDeleted, softDeleteFields } from '../utils/soft-delete.util'
 
 // DB tesis kaydini API yanit formatina cevirir
 function toSiteDto(site: typeof sites.$inferSelect): SiteDto {
@@ -45,7 +47,9 @@ export async function getSiteForCustomerOrThrow(
   const [site] = await db
     .select()
     .from(sites)
-    .where(and(eq(sites.id, siteId), eq(sites.customerId, customerId)))
+    .where(
+      and(eq(sites.id, siteId), eq(sites.customerId, customerId), notDeleted(sites.deletedAt)),
+    )
     .limit(1)
 
   if (!site) {
@@ -102,7 +106,7 @@ export async function listSitesByCustomer(
   const limit = Number(filters.limit ?? 20)
   const offset = (page - 1) * limit
 
-  const conditions = [eq(sites.customerId, customerId)]
+  const conditions = [eq(sites.customerId, customerId), notDeleted(sites.deletedAt)]
 
   if (filters.isActive !== undefined) {
     conditions.push(eq(sites.isActive, filters.isActive))
@@ -183,7 +187,13 @@ export async function updateSite(
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       updatedAt: new Date(),
     })
-    .where(and(eq(sites.id, siteId), eq(sites.customerId, customerId)))
+    .where(
+      and(
+        eq(sites.id, siteId),
+        eq(sites.customerId, customerId),
+        notDeleted(sites.deletedAt),
+      ),
+    )
     .returning()
 
   if (!updated) {
@@ -193,18 +203,29 @@ export async function updateSite(
   return toSiteDto(updated)
 }
 
-// Tesisi siler
+// Tesisi ve bagli asansorleri soft delete ile siler
 export async function deleteSite(customerId: string, siteId: string): Promise<void> {
   await getSiteForCustomerOrThrow(customerId, siteId)
-  await db.delete(sites).where(and(eq(sites.id, siteId), eq(sites.customerId, customerId)))
+  await softDeleteElevatorsBySite(siteId)
+
+  await db
+    .update(sites)
+    .set(softDeleteFields())
+    .where(
+      and(
+        eq(sites.id, siteId),
+        eq(sites.customerId, customerId),
+        notDeleted(sites.deletedAt),
+      ),
+    )
 }
 
-// Musterinin tesis sayisini dondurur (silme kontrolu icin)
+// Musterinin silinmemis tesis sayisini dondurur
 export async function countSitesByCustomer(customerId: string): Promise<number> {
   const result = await db
     .select({ total: count() })
     .from(sites)
-    .where(eq(sites.customerId, customerId))
+    .where(and(eq(sites.customerId, customerId), notDeleted(sites.deletedAt)))
 
   return Number(result[0]?.total ?? 0)
 }
