@@ -30,10 +30,17 @@ export const RegisterBody = t.Omit(_insertUser, [
   'updatedAt',
 ])
 
+// Client bos alanlari "" olarak gonderebildigi icin literal empty string kabul edilir
+const optionalLoginEmail = t.Optional(
+  t.Union([t.Literal(''), t.String({ format: 'email' })]),
+)
+
+const optionalLoginPhone = t.Optional(t.Union([t.Literal(''), phoneSchema]))
+
 // Login endpoint body semasi (email veya telefon + sifre)
 export const LoginBody = t.Object({
-  email: t.Optional(t.String({ format: 'email' })),
-  phone: t.Optional(phoneSchema),
+  email: optionalLoginEmail,
+  phone: optionalLoginPhone,
   password: t.String({ minLength: 8 }),
 })
 

@@ -57,22 +57,29 @@ export async function registerUser(input: RegisterInput): Promise<SafeUser> {
   return toSafeUser(newUser)
 }
 
-// Email veya telefon ve sifre ile kullanici dogrular
-export async function loginUser(input: LoginInput): Promise<SafeUser> {
-  const hasEmail = Boolean(input.email)
-  const hasPhone = Boolean(input.phone)
+// Login istegindeki email/telefon alanlarini temizler; ikisi de doluysa email'i kullanir
+function resolveLoginIdentity(input: LoginInput): { email?: string; phone?: string } {
+  const email = input.email?.trim() || undefined
+  const phone = input.phone?.trim() || undefined
 
-  if (!hasEmail && !hasPhone) {
+  if (!email && !phone) {
     throw new AppError('Email or phone is required', 422, ERROR_CODES.VALIDATION_ERROR)
   }
 
-  if (hasEmail && hasPhone) {
-    throw new AppError('Provide either email or phone, not both', 422, ERROR_CODES.VALIDATION_ERROR)
+  if (email) {
+    return { email }
   }
 
-  const [user] = hasEmail
-    ? await db.select().from(users).where(eq(users.email, input.email!)).limit(1)
-    : await db.select().from(users).where(eq(users.phone, input.phone!)).limit(1)
+  return { phone }
+}
+
+// Email veya telefon ve sifre ile kullanici dogrular
+export async function loginUser(input: LoginInput): Promise<SafeUser> {
+  const identity = resolveLoginIdentity(input)
+
+  const [user] = identity.email
+    ? await db.select().from(users).where(eq(users.email, identity.email)).limit(1)
+    : await db.select().from(users).where(eq(users.phone, identity.phone!)).limit(1)
 
   if (!user || !user.isActive) {
     throw new AppError('Invalid credentials', 401, ERROR_CODES.INVALID_CREDENTIALS)
