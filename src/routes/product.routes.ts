@@ -107,7 +107,7 @@ export const productRoutes = new Elysia({ prefix: '/products', tags: ['products'
         detail: {
           summary: '/products/:id/images',
           description:
-            'Uruna birden fazla fotograf yukler (jpeg/png/webp, max 5MB, urun basina max 20). JWT gerekli.',
+            'multipart/form-data ile fotograf yukler. Field adi "images" olmali (tek veya coklu dosya). JSON body kullanma. Swagger/Scalar ile test ederken gercek dosya sec.',
           security: authSecurity,
         },
       })

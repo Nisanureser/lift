@@ -1,5 +1,9 @@
 import { t } from 'elysia'
-import { PRODUCT_UNITS } from '../constants/product.constants'
+import {
+  ALLOWED_IMAGE_MIMES,
+  MAX_IMAGES_PER_PRODUCT,
+  PRODUCT_UNITS,
+} from '../constants/product.constants'
 
 // Urun olcu birimi semasi
 const ProductUnitSchema = t.Union([
@@ -122,9 +126,22 @@ export const ProductListResponse = t.Object({
   }),
 })
 
-// Coklu fotograf yukleme body semasi
+// Fotograf yukleme icin ortak dosya kurallari
+const productImageFileOptions = {
+  type: [...ALLOWED_IMAGE_MIMES],
+  maxSize: '5m' as const,
+}
+
+// Coklu fotograf yukleme body semasi (multipart/form-data, field: images)
 export const UploadProductImagesBody = t.Object({
-  images: t.Files(),
+  images: t.Union([
+    t.File(productImageFileOptions),
+    t.Files({
+      ...productImageFileOptions,
+      minItems: 1,
+      maxItems: MAX_IMAGES_PER_PRODUCT,
+    }),
+  ]),
 })
 
 // Coklu fotograf yukleme yanit semasi
