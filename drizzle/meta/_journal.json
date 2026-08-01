@@ -43,6 +43,13 @@
       "when": 1785586800000,
       "tag": "0006_customers",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785590400000,
+      "tag": "0007_sites",
+      "breakpoints": true
     }
   ]
 }

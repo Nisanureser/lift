@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia'
 import * as customerController from '../controllers/customer.controller'
+import * as siteController from '../controllers/site.controller'
 import { ErrorResponse } from '../dtos/common.dto'
 import {
   CreateCustomerBody,
@@ -9,11 +10,19 @@ import {
   CustomerResponse,
   UpdateCustomerBody,
 } from '../dtos/customer.dto'
+import {
+  CreateSiteBody,
+  CustomerSiteParams,
+  SiteListQuery,
+  SiteListResponse,
+  SiteResponse,
+  UpdateSiteBody,
+} from '../dtos/site.dto'
 import { authGuard } from '../middlewares/auth.middleware'
 
 const authSecurity = [{ bearerAuth: [] }, { cookieAuth: [] }] as Array<Record<string, string[]>>
 
-// Musteri CRUD endpoint'leri (tum islemler giris gerektirir)
+// Musteri ve musteriye bagli tesis endpoint'leri (tum islemler giris gerektirir)
 export const customerRoutes = new Elysia({ prefix: '/customers', tags: ['customers'] })
   .use(authGuard)
   .get('/', customerController.list, {
@@ -28,19 +37,6 @@ export const customerRoutes = new Elysia({ prefix: '/customers', tags: ['custome
       security: authSecurity,
     },
   })
-  .get('/:id', customerController.getById, {
-    params: CustomerIdParam,
-    response: {
-      200: CustomerResponse,
-      401: ErrorResponse,
-      404: ErrorResponse,
-    },
-    detail: {
-      summary: '/customers/:id',
-      description: 'Tek musteri detayi. Giris gerekli.',
-      security: authSecurity,
-    },
-  })
   .post('/', customerController.create, {
     body: CreateCustomerBody,
     response: {
@@ -52,6 +48,94 @@ export const customerRoutes = new Elysia({ prefix: '/customers', tags: ['custome
     detail: {
       summary: '/customers',
       description: 'Yeni bireysel veya kurumsal musteri olusturur. Giris gerekli.',
+      security: authSecurity,
+    },
+  })
+  .get('/:id/sites', siteController.list, {
+    params: CustomerIdParam,
+    query: SiteListQuery,
+    response: {
+      200: SiteListResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/sites',
+      description: 'Musterinin tesis / bina listesini dondurur. Giris gerekli.',
+      security: authSecurity,
+      tags: ['sites'],
+    },
+  })
+  .post('/:id/sites', siteController.create, {
+    params: CustomerIdParam,
+    body: CreateSiteBody,
+    response: {
+      201: SiteResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+      422: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/sites',
+      description: 'Musteriye yeni tesis / bina ekler. Giris gerekli.',
+      security: authSecurity,
+      tags: ['sites'],
+    },
+  })
+  .get('/:id/sites/:siteId', siteController.getById, {
+    params: CustomerSiteParams,
+    response: {
+      200: SiteResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/sites/:siteId',
+      description: 'Musteriye ait tek tesis detayi. Giris gerekli.',
+      security: authSecurity,
+      tags: ['sites'],
+    },
+  })
+  .patch('/:id/sites/:siteId', siteController.update, {
+    params: CustomerSiteParams,
+    body: UpdateSiteBody,
+    response: {
+      200: SiteResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+      422: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/sites/:siteId',
+      description: 'Tesis bilgilerini gunceller. Giris gerekli.',
+      security: authSecurity,
+      tags: ['sites'],
+    },
+  })
+  .delete('/:id/sites/:siteId', siteController.remove, {
+    params: CustomerSiteParams,
+    response: {
+      204: t.Void(),
+      401: ErrorResponse,
+      404: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/sites/:siteId',
+      description: 'Tesisi siler. Giris gerekli.',
+      security: authSecurity,
+      tags: ['sites'],
+    },
+  })
+  .get('/:id', customerController.getById, {
+    params: CustomerIdParam,
+    response: {
+      200: CustomerResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id',
+      description: 'Tek musteri detayi. Giris gerekli.',
       security: authSecurity,
     },
   })
@@ -77,10 +161,11 @@ export const customerRoutes = new Elysia({ prefix: '/customers', tags: ['custome
       204: t.Void(),
       401: ErrorResponse,
       404: ErrorResponse,
+      409: ErrorResponse,
     },
     detail: {
       summary: '/customers/:id',
-      description: 'Musteriyi siler. Giris gerekli.',
+      description: 'Musteriyi siler. Bagli tesis varsa engellenir. Giris gerekli.',
       security: authSecurity,
     },
   })

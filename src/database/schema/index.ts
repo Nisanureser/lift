@@ -6,6 +6,7 @@ import { products } from './products'
 import { productImages } from './product-images'
 import { stockMovements } from './stock-movements'
 import { customers } from './customers'
+import { sites } from './sites'
 
 // Tum Drizzle tablolarini tek noktadan export eder (migration ve sorgular icin)
 export const schema = {
@@ -17,6 +18,7 @@ export const schema = {
   productImages,
   stockMovements,
   customers,
+  sites,
 } as const
 
 export {
@@ -28,4 +30,5 @@ export {
   productImages,
   stockMovements,
   customers,
+  sites,
 }

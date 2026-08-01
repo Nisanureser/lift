@@ -2,7 +2,7 @@ import { and, count, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import { CUSTOMER_TYPES, type CustomerType } from '../constants/customer.constants'
 import { ERROR_CODES } from '../constants/error-codes'
 import { db } from '../database'
-import { customers } from '../database/schema'
+import { customers, sites } from '../database/schema'
 import type {
   CreateCustomerInput,
   CustomerDto,
@@ -312,8 +312,18 @@ export async function updateCustomer(id: string, input: UpdateCustomerInput): Pr
   return toCustomerDto(updated)
 }
 
-// Musteriyi siler
+// Musteriyi siler; bagli tesis varsa engeller
 export async function deleteCustomer(id: string): Promise<void> {
   await getCustomerOrThrow(id)
+
+  const countResult = await db
+    .select({ total: count() })
+    .from(sites)
+    .where(eq(sites.customerId, id))
+
+  if (Number(countResult[0]?.total ?? 0) > 0) {
+    throw new AppError('Customer has linked sites', 409, ERROR_CODES.CUSTOMER_HAS_SITES)
+  }
+
   await db.delete(customers).where(eq(customers.id, id))
 }
