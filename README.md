@@ -31,7 +31,7 @@ cp .env.example .env
 - `DATABASE_URL` — PostgreSQL baglanti adresi
 - `JWT_SECRET` — en az 32 karakter
 
-### 2. MinIO (fotograflar icin)
+### 2. Altyapi (PostgreSQL + MinIO)
 
 Docker Desktop acik olmali.
 
@@ -39,7 +39,22 @@ Docker Desktop acik olmali.
 docker compose up -d
 ```
 
+Docker Desktop'ta **lift** projesi altinda su servisler calisir:
+
+```
+lift
+├── postgres    → localhost:5432  (postgres / postgres, db: lift)
+├── minio       → localhost:9000  (API), :9001 (Console)
+└── minio-init  → bucket olusturur, sonra kapanir
+```
+
 MinIO Console: http://localhost:9001 (`minioadmin` / `minioadmin`)
+
+`.env` icindeki `DATABASE_URL` docker ile uyumlu olmali:
+
+```
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/lift
+```
 
 ### 3. Bagimliliklar ve veritabani
 
@@ -67,8 +82,9 @@ bun run dev
 Her oturumda sirayla:
 
 ```bash
-docker compose up -d    # MinIO
+docker compose up -d    # postgres + minio
 bun run dev             # API
+```
 ```
 
 MinIO kapaliysa API baslarken bekler veya hata verir.

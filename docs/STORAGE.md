@@ -9,7 +9,7 @@ Urun fotograflari artik bilgisayarin klasorune degil, **MinIO** adli bir depoya 
 - Fotograf sildiginde hem depodan hem veritabanindan silinir.
 - Depoya sadece **giris yapmis kullanicilar** erisebilir; linki bilen biri giris yapmadan goremez.
 
-Gelistirme ortaminda MinIO **Docker** ile calisir. Bilgisayari her actiginda once MinIO'yu, sonra API'yi baslatman gerekir.
+Gelistirme ortaminda PostgreSQL ve MinIO **Docker** ile calisir. Bilgisayari her actiginda once `docker compose up -d`, sonra API'yi baslatman gerekir.
 
 ---
 
@@ -33,6 +33,15 @@ Client → GET /uploads/products/... (auth gerekli)
 
 ```bash
 docker compose up -d
+```
+
+Docker Desktop'ta **lift** projesi:
+
+```
+lift
+├── postgres
+├── minio
+└── minio-init
 ```
 
 | Servis | Port | Aciklama |
