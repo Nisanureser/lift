@@ -7,6 +7,12 @@ export const env = {
   JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? '*',
+  COOKIE_SECURE:
+    process.env.COOKIE_SECURE === 'true' ||
+    (process.env.COOKIE_SECURE !== 'false' &&
+      (process.env.NODE_ENV ?? 'development') === 'production'),
+  COOKIE_SAME_SITE: (process.env.COOKIE_SAME_SITE ?? 'lax') as 'lax' | 'strict' | 'none',
+  COOKIE_DOMAIN: process.env.COOKIE_DOMAIN ?? '',
   UPLOAD_DIR: process.env.UPLOAD_DIR ?? 'uploads',
   PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL ?? 'http://localhost:3000',
 } as const

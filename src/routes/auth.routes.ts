@@ -1,8 +1,9 @@
 import { Elysia, t } from 'elysia'
 import * as authController from '../controllers/auth.controller'
 import {
+  AuthCookieSchema,
   AuthResponse,
-  AuthTokensResponse,
+  AuthSessionResponse,
   LoginBody,
   LogoutBody,
   RefreshBody,
@@ -16,8 +17,9 @@ const tokenErrorResponse = t.Object({ error: t.String(), code: t.Optional(t.Stri
 // Auth endpoint'lerini controller'lara baglayan route grubu
 export const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
   .use(jwtPlugin)
-  .post('/register', authController.register, {
+  .post('/register', ({ body, jwt, set, cookie }) => authController.register({ body, jwt, set, cookie }), {
     body: RegisterBody,
+    cookie: AuthCookieSchema,
     response: {
       201: AuthResponse,
       409: tokenErrorResponse,
@@ -25,11 +27,13 @@ export const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
     },
     detail: {
       summary: '/auth/register',
-      description: 'Kayit sonrasi accessToken (kisa omurlu) ve refreshToken (uzun omurlu) doner.',
+      description:
+        'Kayit sonrasi accessToken ve refreshToken httpOnly cookie olarak set edilir; body sadece user doner.',
     },
   })
-  .post('/login', authController.login, {
+  .post('/login', ({ body, jwt, set, cookie }) => authController.login({ body, jwt, set, cookie }), {
     body: LoginBody,
+    cookie: AuthCookieSchema,
     response: {
       200: AuthResponse,
       401: tokenErrorResponse,
@@ -37,49 +41,55 @@ export const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
     },
     detail: {
       summary: '/auth/login',
-      description: 'Email veya telefon ile giris. accessToken + refreshToken doner.',
+      description:
+        'Email veya telefon ile giris. Tokenlar httpOnly cookie olarak set edilir; body sadece user doner.',
     },
   })
-  .post('/refresh', authController.refresh, {
-    body: RefreshBody,
+  .post(
+    '/refresh',
+    ({ body, jwt, set, cookie }) => authController.refresh({ body, jwt, set, cookie }),
+    {
+      body: RefreshBody,
+      cookie: AuthCookieSchema,
+      response: {
+        200: AuthSessionResponse,
+        401: tokenErrorResponse,
+        422: tokenErrorResponse,
+      },
+      detail: {
+        summary: '/auth/refresh',
+        description:
+          'Refresh token cookie ile yeni token cifti uretir. Mobil/API client icin body.refreshToken fallback desteklenir.',
+      },
+    },
+  )
+  .post(
+    '/logout',
+    ({ body, set, cookie, request, jwt }) =>
+      authController.logout({ body, set, cookie, request, jwt }),
+    {
+      body: LogoutBody,
+      cookie: AuthCookieSchema,
+      response: {
+        200: AuthSessionResponse,
+        401: tokenErrorResponse,
+      },
+      detail: {
+        summary: '/auth/logout',
+        description:
+          'Refresh token iptal edilir, access token blackliste alinir, cookie silinir. Access token suresi dolmus olsa bile calisir.',
+      },
+    },
+  )
+  .use(authGuard)
+  .get('/me', authController.me, {
     response: {
-      200: AuthTokensResponse,
+      200: t.Object({ user: UserResponse }),
       401: tokenErrorResponse,
-      422: tokenErrorResponse,
     },
     detail: {
-      summary: '/auth/refresh',
-      description: 'Suresi dolmus accessToken yerine refreshToken ile yeni token cifti alir.',
+      summary: '/auth/me',
+      description: 'lift_access_token cookie veya Authorization: Bearer header ile calisir.',
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
     },
   })
-  .group('', (app) =>
-    app
-      .use(authGuard)
-      .get('/me', authController.me, {
-        response: {
-          200: t.Object({ user: UserResponse }),
-          401: tokenErrorResponse,
-        },
-        detail: {
-          summary: '/auth/me',
-          description: 'Authorization: Bearer {accessToken} header ile calisir.',
-          security: [{ bearerAuth: [] }],
-        },
-      })
-      .post(
-        '/logout',
-        ({ body, accessJti, set }) => authController.logout({ body, accessJti, set }),
-        {
-          body: LogoutBody,
-          response: {
-            200: t.Object({ message: t.String() }),
-            401: tokenErrorResponse,
-          },
-          detail: {
-            summary: '/auth/logout',
-            description: 'Refresh token iptal edilir, access token blackliste alinir.',
-            security: [{ bearerAuth: [] }],
-          },
-        },
-      ),
-  )

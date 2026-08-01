@@ -1,20 +1,26 @@
 import type { SafeUser } from '../types/auth.types'
 import { loginUser, registerUser } from '../services/auth.service'
 import { issueTokenPair, revokeSession, rotateTokenPair } from '../services/token.service'
+import {
+  type AuthCookieJar,
+  clearAuthCookies,
+  getAccessToken,
+  getRefreshToken,
+  setAuthCookies,
+} from '../utils/auth-cookie.util'
 import { runController } from '../utils/controller.util'
+import { AppError } from '../utils/errors.util'
+import { ERROR_CODES } from '../constants/error-codes'
 
 type JwtSigner = {
   sign: (payload: Record<string, string>) => Promise<string>
+  verify: (token: string) => Promise<unknown>
 }
 
-// Token ciftini mobil uyumluluk icin token alias'i ile birlikte dondurur
-function toAuthResponse(user: SafeUser, accessToken: string, refreshToken: string) {
-  return {
-    user,
-    accessToken,
-    refreshToken,
-    token: accessToken,
-  }
+type AuthHandlerContext = {
+  jwt: JwtSigner
+  set: { status?: number | string }
+  cookie: AuthCookieJar
 }
 
 // Yeni kullanici kaydi HTTP handler'i
@@ -22,17 +28,18 @@ export async function register({
   body,
   jwt,
   set,
-}: {
+  cookie,
+}: AuthHandlerContext & {
   body: Parameters<typeof registerUser>[0]
-  jwt: JwtSigner
-  set: { status?: number | string }
 }) {
   return runController(set, async () => {
     const user = await registerUser(body)
     const tokens = await issueTokenPair(user, jwt)
 
+    setAuthCookies(cookie, tokens.accessToken, tokens.refreshToken)
+
     set.status = 201
-    return toAuthResponse(user, tokens.accessToken, tokens.refreshToken)
+    return { user }
   })
 }
 
@@ -41,39 +48,43 @@ export async function login({
   body,
   jwt,
   set,
-}: {
+  cookie,
+}: AuthHandlerContext & {
   body: Parameters<typeof loginUser>[0]
-  jwt: JwtSigner
-  set: { status?: number | string }
 }) {
   return runController(set, async () => {
     const user = await loginUser(body)
     const tokens = await issueTokenPair(user, jwt)
 
+    setAuthCookies(cookie, tokens.accessToken, tokens.refreshToken)
+
     set.status = 200
-    return toAuthResponse(user, tokens.accessToken, tokens.refreshToken)
+    return { user }
   })
 }
 
-// Refresh token ile yeni access token uretir
+// Refresh token cookie'si ile yeni token cifti uretir
 export async function refresh({
   body,
   jwt,
   set,
-}: {
-  body: { refreshToken: string }
-  jwt: JwtSigner
-  set: { status?: number | string }
+  cookie,
+}: AuthHandlerContext & {
+  body: { refreshToken?: string }
 }) {
   return runController(set, async () => {
-    const tokens = await rotateTokenPair(body.refreshToken, jwt)
+    const refreshToken = getRefreshToken(cookie, body.refreshToken)
+
+    if (!refreshToken) {
+      throw new AppError('Refresh token is required', 401, ERROR_CODES.REFRESH_TOKEN_INVALID)
+    }
+
+    const tokens = await rotateTokenPair(refreshToken, jwt)
+
+    setAuthCookies(cookie, tokens.accessToken, tokens.refreshToken)
 
     set.status = 200
-    return {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      token: tokens.accessToken,
-    }
+    return { message: 'Session refreshed' }
   })
 }
 
@@ -82,18 +93,44 @@ export function me({ user }: { user: SafeUser }) {
   return { user }
 }
 
-// Cikis yaparak refresh token'i iptal eder ve access token'i blacklist'e alir
+// Cikis yaparak refresh token'i iptal eder, access token'i blacklist'e alir ve cookie'leri siler
 export async function logout({
   body,
-  accessJti,
   set,
+  cookie,
+  request,
+  jwt,
 }: {
-  body: { refreshToken: string }
-  accessJti?: string
+  body: { refreshToken?: string }
   set: { status?: number | string }
+  cookie: AuthCookieJar
+  request: Request
+  jwt: JwtSigner
 }) {
   return runController(set, async () => {
-    await revokeSession(body.refreshToken, accessJti)
+    const accessToken = getAccessToken(
+      request.headers.get('cookie'),
+      request.headers.get('authorization'),
+      cookie,
+    )
+
+    let accessJti: string | undefined
+
+    if (accessToken) {
+      const payload = await jwt.verify(accessToken)
+
+      if (payload && typeof payload === 'object' && 'jti' in payload && payload.jti) {
+        accessJti = String(payload.jti)
+      }
+    }
+
+    const refreshToken = getRefreshToken(cookie, body.refreshToken)
+
+    if (refreshToken) {
+      await revokeSession(refreshToken, accessJti)
+    }
+
+    clearAuthCookies(cookie)
     return { message: 'Logged out successfully' }
   })
 }

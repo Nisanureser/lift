@@ -39,6 +39,11 @@ function parseDurationToMs(duration: string): number {
   }
 }
 
+// Cookie maxAge icin sure string'ini saniyeye cevirir
+export function parseDurationToSeconds(duration: string): number {
+  return Math.floor(parseDurationToMs(duration) / 1000)
+}
+
 // Token'i DB'de guvenli saklamak icin SHA-256 hash uretir
 export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex')

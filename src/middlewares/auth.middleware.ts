@@ -5,6 +5,7 @@ import { ERROR_CODES } from '../constants/error-codes'
 import { getUserById } from '../services/auth.service'
 import { isAccessTokenBlacklisted } from '../services/token.service'
 import type { SafeUser } from '../types/auth.types'
+import { getAccessToken } from '../utils/auth-cookie.util'
 
 // JWT dogrulama plugin'ini yapilandirir ve auth context'ine ekler
 export const jwtPlugin = new Elysia({ name: 'jwt-plugin' }).use(
@@ -15,21 +16,14 @@ export const jwtPlugin = new Elysia({ name: 'jwt-plugin' }).use(
   }),
 )
 
-// Authorization header'dan Bearer token'i ayiklar
-function extractBearerToken(authorization?: string | null): string | null {
-  if (!authorization?.startsWith('Bearer ')) {
-    return null
-  }
-
-  const token = authorization.slice(7).trim()
-  return token.length > 0 ? token : null
-}
-
-// Korunan route'larda JWT dogrular ve oturum acik kullaniciyi context'e ekler
+// Korunan route'larda cookie veya Bearer token ile JWT dogrular
 export const authGuard = new Elysia({ name: 'auth-guard' })
   .use(jwtPlugin)
   .resolve({ as: 'scoped' }, async ({ jwt, request, status }) => {
-    const token = extractBearerToken(request.headers.get('authorization'))
+    const token = getAccessToken(
+      request.headers.get('cookie'),
+      request.headers.get('authorization'),
+    )
 
     if (!token) {
       return status(401, {
@@ -68,7 +62,5 @@ export const authGuard = new Elysia({ name: 'auth-guard' })
       })
     }
 
-    const accessJti = 'jti' in payload && payload.jti ? String(payload.jti) : undefined
-
-    return { user: user satisfies SafeUser, accessJti }
+    return { user: user satisfies SafeUser }
   })

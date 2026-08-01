@@ -94,7 +94,7 @@ export async function loginUser(input: LoginInput): Promise<SafeUser> {
   return toSafeUser(user)
 }
 
-// JWT icin kullanilacak payload bilgisini kullanici ID'sinden uretir
+// Aktif kullaniciyi ID ile getirir
 export async function getUserById(userId: string): Promise<SafeUser | null> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
 

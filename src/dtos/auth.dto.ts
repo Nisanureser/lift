@@ -55,35 +55,25 @@ export const UserResponse = t.Object({
   updatedAt: t.Date(),
 })
 
-// JWT payload semasi
-export const JwtPayload = t.Object({
-  userId: t.String(),
-  email: t.String({ format: 'email' }),
-  username: t.String(),
-  jti: t.String(),
-})
-
-// Refresh endpoint body semasi
+// Mobil/API fallback: opsiyonel refresh token body semasi
 export const RefreshBody = t.Object({
-  refreshToken: t.String({ minLength: 32 }),
+  refreshToken: t.Optional(t.String({ minLength: 32 })),
 })
 
-// Logout endpoint body semasi
-export const LogoutBody = t.Object({
-  refreshToken: t.String({ minLength: 32 }),
+export const LogoutBody = RefreshBody
+
+// Auth cookie semasi
+export const AuthCookieSchema = t.Cookie({
+  lift_access_token: t.Optional(t.String()),
+  lift_refresh_token: t.Optional(t.String()),
 })
 
-// Auth token yanit semasi
-export const AuthTokensResponse = t.Object({
-  accessToken: t.String(),
-  refreshToken: t.String(),
-  token: t.String(),
+// Oturum yenileme / cikis mesaj yaniti
+export const AuthSessionResponse = t.Object({
+  message: t.String(),
 })
 
 // Register/login yanit semasi
 export const AuthResponse = t.Object({
   user: UserResponse,
-  accessToken: t.String(),
-  refreshToken: t.String(),
-  token: t.String(),
 })

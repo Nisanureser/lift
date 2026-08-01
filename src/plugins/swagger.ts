@@ -19,6 +19,13 @@ export const swaggerPlugin = swagger({
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
+          description: 'Mobil/API client icin Authorization: Bearer {accessToken}',
+        },
+        cookieAuth: {
+          type: 'apiKey',
+          in: 'cookie',
+          name: 'lift_access_token',
+          description: 'Web client icin httpOnly access token cookie',
         },
       },
     },
