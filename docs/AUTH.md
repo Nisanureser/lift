@@ -5,6 +5,7 @@
 Bu bolum, uygulamaya kimlerin girebilecegini yonetir.
 
 - Yeni biri **kayit olabilir**: ad, e-posta, telefon ve sifre ile hesap acilir.
+- **Ayni e-posta veya ayni telefon numarasiyla ikinci hesap acilamaz.** Her e-posta ve her telefon yalnizca bir hesaba bagli olabilir.
 - Kayit olan veya daha once hesabi olan biri **giris yapabilir**: e-posta **veya** telefon + sifre yeterli.
 - Giris yapinca sistem seni tanir; sonraki isteklerde "ben girdim" bilgisi otomatik gider.
 - Oturum suresi dolunca **yenileme** yapilir; kullanici tekrar sifre yazmak zorunda kalmaz (refresh akisi calisiyorsa).
@@ -37,6 +38,16 @@ Giris bilgisi tarayicida **gizli cerez (cookie)** olarak tutulur. Mobil uygulama
   "password": "sifre1234"
 }
 ```
+
+### Kayit tekillik kurallari
+
+| Alan | Kural | Hata kodu |
+|------|-------|-----------|
+| email | Sistemde kayitli olamaz | `EMAIL_EXISTS` (409) |
+| phone | Sistemde kayitli olamaz | `PHONE_EXISTS` (409) |
+| username | Sistemde kayitli olamaz | `USERNAME_EXISTS` (409) |
+
+E-posta kucuk harfe cevrilerek kaydedilir. Telefon ve e-posta kayittan once normalize edilir; veritabaninda da `UNIQUE` kisiti vardir.
 
 ### Giris body
 

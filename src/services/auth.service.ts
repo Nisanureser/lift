@@ -1,4 +1,4 @@
-import { eq, or } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { ERROR_CODES } from '../constants/error-codes'
 import { db } from '../database'
 import { users } from '../database/schema'
@@ -19,32 +19,51 @@ function toSafeUser(user: typeof users.$inferSelect): SafeUser {
   }
 }
 
-// Yeni kullanici kaydi olusturur; email/username cakismasinda hata firlatir
-export async function registerUser(input: RegisterInput): Promise<SafeUser> {
-  const existing = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(
-      or(
-        eq(users.email, input.email),
-        eq(users.username, input.username),
-        eq(users.phone, input.phone),
-      ),
-    )
-    .limit(1)
+// Kayit istegindeki email, telefon ve kullanici adini karsilastirma icin normalize eder
+function normalizeRegisterInput(input: RegisterInput): RegisterInput {
+  return {
+    ...input,
+    username: input.username.trim(),
+    email: input.email.trim().toLowerCase(),
+    phone: input.phone.trim().replace(/\s/g, ''),
+  }
+}
 
-  if (existing.length > 0) {
-    throw new AppError('Email, username or phone already registered', 409, ERROR_CODES.USER_EXISTS)
+// Ayni email, telefon veya kullanici adiyla ikinci hesap acilmasini engeller
+async function ensureRegisterIdentityAvailable(input: RegisterInput): Promise<void> {
+  const [emailMatch, phoneMatch, usernameMatch] = await Promise.all([
+    db.select({ id: users.id }).from(users).where(eq(users.email, input.email)).limit(1),
+    db.select({ id: users.id }).from(users).where(eq(users.phone, input.phone)).limit(1),
+    db.select({ id: users.id }).from(users).where(eq(users.username, input.username)).limit(1),
+  ])
+
+  if (emailMatch.length > 0) {
+    throw new AppError('Email already registered', 409, ERROR_CODES.EMAIL_EXISTS)
   }
 
-  const { hash, salt } = createPasswordHash(input.password)
+  if (phoneMatch.length > 0) {
+    throw new AppError('Phone already registered', 409, ERROR_CODES.PHONE_EXISTS)
+  }
+
+  if (usernameMatch.length > 0) {
+    throw new AppError('Username already registered', 409, ERROR_CODES.USERNAME_EXISTS)
+  }
+}
+
+// Yeni kullanici kaydi olusturur; email/telefon/kullanici adi tekilligini kontrol eder
+export async function registerUser(input: RegisterInput): Promise<SafeUser> {
+  const normalized = normalizeRegisterInput(input)
+
+  await ensureRegisterIdentityAvailable(normalized)
+
+  const { hash, salt } = createPasswordHash(normalized.password)
 
   const [newUser] = await db
     .insert(users)
     .values({
-      username: input.username,
-      email: input.email,
-      phone: input.phone,
+      username: normalized.username,
+      email: normalized.email,
+      phone: normalized.phone,
       password: hash,
       salt,
     })
@@ -59,8 +78,8 @@ export async function registerUser(input: RegisterInput): Promise<SafeUser> {
 
 // Login istegindeki email/telefon alanlarini temizler; ikisi de doluysa email'i kullanir
 function resolveLoginIdentity(input: LoginInput): { email?: string; phone?: string } {
-  const email = input.email?.trim() || undefined
-  const phone = input.phone?.trim() || undefined
+  const email = input.email?.trim().toLowerCase() || undefined
+  const phone = input.phone?.trim().replace(/\s/g, '') || undefined
 
   if (!email && !phone) {
     throw new AppError('Email or phone is required', 422, ERROR_CODES.VALIDATION_ERROR)
