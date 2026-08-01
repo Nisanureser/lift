@@ -2,6 +2,13 @@ import { t } from 'elysia'
 import { createInsertSchema } from 'drizzle-typebox'
 import { users } from '../database/schema'
 
+// Telefon numarasi validasyon semasi (register ve login icin ortak)
+const phoneSchema = t.String({
+  minLength: 10,
+  maxLength: 20,
+  pattern: '^\\+?[0-9]{10,15}$',
+})
+
 // Drizzle users tablosundan kayit istegi validasyon semasini uretir
 const _insertUser = createInsertSchema(users, {
   email: t.String({ format: 'email' }),
@@ -11,11 +18,7 @@ const _insertUser = createInsertSchema(users, {
     pattern: '^[a-zA-Z0-9_]+$',
   }),
   password: t.String({ minLength: 8, maxLength: 100 }),
-  phone: t.String({
-    minLength: 10,
-    maxLength: 20,
-    pattern: '^\\+?[0-9]{10,15}$',
-  }),
+  phone: phoneSchema,
 })
 
 // Register endpoint body semasi (hassas alanlar haric)
@@ -27,9 +30,10 @@ export const RegisterBody = t.Omit(_insertUser, [
   'updatedAt',
 ])
 
-// Login endpoint body semasi
+// Login endpoint body semasi (email veya telefon + sifre)
 export const LoginBody = t.Object({
-  email: t.String({ format: 'email' }),
+  email: t.Optional(t.String({ format: 'email' })),
+  phone: t.Optional(phoneSchema),
   password: t.String({ minLength: 8 }),
 })
 

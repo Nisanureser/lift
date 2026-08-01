@@ -1,0 +1,15 @@
+# Nginx reverse proxy - mobil test icin
+# Kullanim: bun run dev calisirken ayri terminalde:
+#   docker compose -f docker-compose.nginx.yml up -d
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: lift-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

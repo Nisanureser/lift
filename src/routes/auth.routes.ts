@@ -33,7 +33,7 @@ export const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
     },
     detail: {
       summary: '/auth/login',
-      description: 'Email ve sifre ile giris yapar, JWT access token doner.',
+      description: 'Email veya telefon ve sifre ile giris yapar, JWT access token doner.',
     },
   })
   .group('', (app) =>

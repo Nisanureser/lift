@@ -57,9 +57,22 @@ export async function registerUser(input: RegisterInput): Promise<SafeUser> {
   return toSafeUser(newUser)
 }
 
-// Email ve sifre ile kullanici dogrular; basarisiz girislerde genel hata mesaji doner
+// Email veya telefon ve sifre ile kullanici dogrular
 export async function loginUser(input: LoginInput): Promise<SafeUser> {
-  const [user] = await db.select().from(users).where(eq(users.email, input.email)).limit(1)
+  const hasEmail = Boolean(input.email)
+  const hasPhone = Boolean(input.phone)
+
+  if (!hasEmail && !hasPhone) {
+    throw new AppError('Email or phone is required', 422, ERROR_CODES.VALIDATION_ERROR)
+  }
+
+  if (hasEmail && hasPhone) {
+    throw new AppError('Provide either email or phone, not both', 422, ERROR_CODES.VALIDATION_ERROR)
+  }
+
+  const [user] = hasEmail
+    ? await db.select().from(users).where(eq(users.email, input.email!)).limit(1)
+    : await db.select().from(users).where(eq(users.phone, input.phone!)).limit(1)
 
   if (!user || !user.isActive) {
     throw new AppError('Invalid credentials', 401, ERROR_CODES.INVALID_CREDENTIALS)
