@@ -4,14 +4,13 @@ import type { StockAdjustInput, StockInInput, StockMovementListFilters } from '.
 import {
   createProduct,
   deleteProduct,
-  deleteProductImage,
   getProductById,
   listProducts,
   updateProduct,
-  uploadProductImages,
 } from '../services/product.service'
 import { adjustStock, listStockMovements, stockIn, stockOut } from '../services/stock.service'
 import { runController } from '../utils/controller.util'
+import { normalizeImageFiles, normalizeRemoveImageIds } from '../utils/product-form.util'
 
 // Asansor urunlerini listeler
 export async function list({ query }: { query: ProductListFilters }) {
@@ -29,7 +28,7 @@ export async function getById({
   return runController(set, async () => getProductById(params.id))
 }
 
-// Yeni asansor urunu olusturur
+// Yeni asansor urunu olusturur; body'deki images varsa ayni istekte yukler
 export async function create({
   body,
   user,
@@ -40,13 +39,15 @@ export async function create({
   set: { status?: number | string }
 }) {
   return runController(set, async () => {
-    const product = await createProduct(body, user.id)
+    const { images, ...productInput } = body
+    const product = await createProduct(productInput, user.id, normalizeImageFiles(images))
+
     set.status = 201
     return product
   })
 }
 
-// Mevcut urunu gunceller
+// Mevcut urunu gunceller; removeImageIds ile silme, images ile ekleme yapilir
 export async function update({
   params,
   body,
@@ -56,7 +57,16 @@ export async function update({
   body: UpdateProductInput
   set: { status?: number | string }
 }) {
-  return runController(set, async () => updateProduct(params.id, body))
+  return runController(set, async () => {
+    const { images, removeImageIds, ...productInput } = body
+
+    return updateProduct(
+      params.id,
+      productInput,
+      normalizeImageFiles(images),
+      normalizeRemoveImageIds(removeImageIds),
+    )
+  })
 }
 
 // Urunu siler
@@ -69,39 +79,6 @@ export async function remove({
 }) {
   return runController(set, async () => {
     await deleteProduct(params.id)
-    set.status = 204
-    return null
-  })
-}
-
-// Uruna birden fazla fotograf yukler
-export async function uploadImages({
-  params,
-  body,
-  set,
-}: {
-  params: { id: string }
-  body: { images: File | File[] }
-  set: { status?: number | string }
-}) {
-  return runController(set, async () => {
-    const files = Array.isArray(body.images) ? body.images : [body.images]
-    const result = await uploadProductImages(params.id, files)
-    set.status = 201
-    return result
-  })
-}
-
-// Urun fotografini siler
-export async function removeImage({
-  params,
-  set,
-}: {
-  params: { id: string; imageId: string }
-  set: { status?: number | string }
-}) {
-  return runController(set, async () => {
-    await deleteProductImage(params.id, params.imageId)
     set.status = 204
     return null
   })

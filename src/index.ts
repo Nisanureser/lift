@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { sql } from 'drizzle-orm'
 import { validateEnv, env } from './config/env'
 import { db } from './database'
+import { authGuard } from './middlewares/auth.middleware'
 import { swaggerPlugin } from './plugins/swagger'
 import { apiRoutes } from './routes'
 import { AppError, toErrorResponse } from './utils/errors.util'
@@ -20,18 +21,6 @@ const app = new Elysia()
   )
   .use(swaggerPlugin)
   .decorate('db', db)
-  .get('/uploads/*', async ({ request, set }) => {
-    const url = new URL(request.url)
-    const filePath = url.pathname.replace('/uploads/', '')
-    const file = Bun.file(join(env.UPLOAD_DIR, filePath))
-
-    if (!(await file.exists())) {
-      set.status = 404
-      return { error: 'File not found' }
-    }
-
-    return file
-  })
   .get(
     '/health',
     async () => {
@@ -48,6 +37,20 @@ const app = new Elysia()
         description: 'API ve veritabani baglantisinin calistigini dogrular.',
       },
     },
+  )
+  .use(
+    new Elysia().use(authGuard).get('/uploads/*', async ({ request, set }) => {
+      const url = new URL(request.url)
+      const filePath = url.pathname.replace('/uploads/', '')
+      const file = Bun.file(join(env.UPLOAD_DIR, filePath))
+
+      if (!(await file.exists())) {
+        set.status = 404
+        return { error: 'File not found' }
+      }
+
+      return file
+    }),
   )
   .use(apiRoutes)
   .onError(({ code, error, set }) => {

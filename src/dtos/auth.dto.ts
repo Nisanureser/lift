@@ -60,17 +60,10 @@ export const RefreshBody = t.Object({
   refreshToken: t.Optional(t.String({ minLength: 32 })),
 })
 
-export const LogoutBody = RefreshBody
-
 // Auth cookie semasi
 export const AuthCookieSchema = t.Cookie({
   lift_access_token: t.Optional(t.String()),
   lift_refresh_token: t.Optional(t.String()),
-})
-
-// Oturum yenileme / cikis mesaj yaniti
-export const AuthSessionResponse = t.Object({
-  message: t.String(),
 })
 
 // Register/login yanit semasi

@@ -10,15 +10,6 @@ export const PRODUCT_UNITS = {
 
 export type ProductUnit = (typeof PRODUCT_UNITS)[keyof typeof PRODUCT_UNITS]
 
-export const PRODUCT_UNIT_LABELS: Record<ProductUnit, string> = {
-  piece: 'Adet',
-  liter: 'Litre',
-  kilogram: 'Kilogram',
-  meter: 'Metre',
-  box: 'Kutu',
-  pack: 'Paket',
-}
-
 // Stok hareket tipleri
 export const STOCK_MOVEMENT_TYPES = {
   IN: 'in',

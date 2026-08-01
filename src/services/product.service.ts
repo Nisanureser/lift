@@ -97,8 +97,12 @@ function ensureValidUnit(unit: string): asserts unit is ProductUnit {
   }
 }
 
-// Yeni urun olusturur
-export async function createProduct(input: CreateProductInput, userId: string): Promise<ProductDto> {
+// Yeni urun olusturur; istege bagli fotograflari da ayni akista yukler
+export async function createProduct(
+  input: CreateProductInput,
+  userId: string,
+  imageFiles: File[] = [],
+): Promise<ProductDto> {
   await ensureActiveCategory(input.categoryId)
   ensureValidUnit(input.unit)
   await ensureUniqueSku(input.sku)
@@ -128,6 +132,10 @@ export async function createProduct(input: CreateProductInput, userId: string): 
     if (initialStock > 0) {
       await stockIn(product.id, { quantity: input.initialStock, note: 'Initial stock' }, userId)
     }
+  }
+
+  if (imageFiles.length > 0) {
+    await uploadProductImages(product.id, imageFiles)
   }
 
   return getProductById(product.id)
@@ -224,9 +232,20 @@ export async function getProductById(id: string): Promise<ProductDto> {
   return toProductDto(product)
 }
 
-// Mevcut urunu gunceller
-export async function updateProduct(id: string, input: UpdateProductInput): Promise<ProductDto> {
+// Mevcut urunu gunceller; fotograf silebilir ve yeni fotograf ekleyebilir
+export async function updateProduct(
+  id: string,
+  input: UpdateProductInput,
+  imageFiles: File[] = [],
+  removeImageIds: string[] = [],
+): Promise<ProductDto> {
   await getProductOrThrow(id)
+
+  const uniqueRemoveIds = [...new Set(removeImageIds)]
+
+  for (const imageId of uniqueRemoveIds) {
+    await deleteProductImage(id, imageId)
+  }
 
   if (input.categoryId) {
     await ensureActiveCategory(input.categoryId)
@@ -259,7 +278,11 @@ export async function updateProduct(id: string, input: UpdateProductInput): Prom
     throw new AppError('Product not found', 404, ERROR_CODES.PRODUCT_NOT_FOUND)
   }
 
-  return toProductDto(updated)
+  if (imageFiles.length > 0) {
+    await uploadProductImages(id, imageFiles)
+  }
+
+  return getProductById(id)
 }
 
 // Urunu ve tum fotograflarini siler
@@ -282,11 +305,7 @@ export async function deleteProduct(id: string): Promise<void> {
 }
 
 // Uruna tek fotograf kaydeder
-async function saveProductImage(
-  productId: string,
-  file: File,
-  isPrimary: boolean,
-): Promise<ProductImageDto> {
+async function saveProductImage(productId: string, file: File, isPrimary: boolean): Promise<void> {
   validateImageFile(file)
 
   const fileName = buildImageFileName(file.name)
@@ -325,19 +344,12 @@ async function saveProductImage(
   if (!image) {
     throw new AppError('Failed to upload image', 500, ERROR_CODES.PRODUCT_IMAGE_NOT_FOUND)
   }
-
-  return toImageDto(image)
 }
 
 // Uruna birden fazla fotograf yukler
-export async function uploadProductImages(
-  productId: string,
-  files: File[],
-): Promise<{ images: ProductImageDto[]; total: number }> {
-  await getProductOrThrow(productId)
-
+async function uploadProductImages(productId: string, files: File[]): Promise<void> {
   if (files.length === 0) {
-    throw new AppError('At least one image is required', 422, ERROR_CODES.VALIDATION_ERROR)
+    return
   }
 
   const existingCount = await db
@@ -374,23 +386,10 @@ export async function uploadProductImages(
       hasPrimaryImage = true
     }
   }
-
-  const allImages = await db
-    .select()
-    .from(productImages)
-    .where(eq(productImages.productId, productId))
-    .orderBy(desc(productImages.isPrimary), productImages.sortOrder)
-
-  return {
-    images: allImages.map(toImageDto),
-    total: allImages.length,
-  }
 }
 
 // Urun fotografini siler
-export async function deleteProductImage(productId: string, imageId: string): Promise<void> {
-  await getProductOrThrow(productId)
-
+async function deleteProductImage(productId: string, imageId: string): Promise<void> {
   const [image] = await db
     .select()
     .from(productImages)

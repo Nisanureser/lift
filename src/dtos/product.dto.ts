@@ -18,7 +18,25 @@ const ProductUnitSchema = t.Union([
 // Stok miktari string semasi (max 3 ondalik)
 const StockQuantityString = t.String({ pattern: '^\\d+(\\.\\d{1,3})?$' })
 
-// Urun olusturma body semasi
+// Fotograf yukleme icin ortak dosya kurallari
+const productImageFileOptions = {
+  type: [...ALLOWED_IMAGE_MIMES],
+  maxSize: '5m' as const,
+}
+
+// Tek veya coklu fotograf alani (opsiyonel)
+const ProductImagesField = t.Optional(
+  t.Union([
+    t.File(productImageFileOptions),
+    t.Files({
+      ...productImageFileOptions,
+      minItems: 1,
+      maxItems: MAX_IMAGES_PER_PRODUCT,
+    }),
+  ]),
+)
+
+// Urun olusturma body semasi (JSON veya multipart/form-data; images opsiyonel)
 export const CreateProductBody = t.Object({
   sku: t.String({ minLength: 1, maxLength: 100 }),
   name: t.String({ minLength: 2, maxLength: 200 }),
@@ -27,10 +45,17 @@ export const CreateProductBody = t.Object({
   unit: ProductUnitSchema,
   categoryId: t.String({ minLength: 1 }),
   initialStock: t.Optional(StockQuantityString),
-  isActive: t.Optional(t.Boolean()),
+  isActive: t.Optional(t.Union([t.Boolean(), t.BooleanString()])),
+  images: ProductImagesField,
 })
 
-// Urun guncelleme body semasi (stok buradan guncellenmez)
+// Silinecek fotograf ID listesi (JSON dizisi veya tek id)
+const RemoveImageIdsField = t.Union([
+  t.Array(t.String({ minLength: 1 })),
+  t.String({ minLength: 1 }),
+])
+
+// Urun guncelleme body semasi (stok buradan guncellenmez; fotograf ekleme/silme destekler)
 export const UpdateProductBody = t.Partial(
   t.Object({
     sku: t.String({ minLength: 1, maxLength: 100 }),
@@ -39,7 +64,9 @@ export const UpdateProductBody = t.Partial(
     price: t.String({ pattern: '^\\d+(\\.\\d{1,2})?$' }),
     unit: ProductUnitSchema,
     categoryId: t.String({ minLength: 1 }),
-    isActive: t.Boolean(),
+    isActive: t.Union([t.Boolean(), t.BooleanString()]),
+    removeImageIds: RemoveImageIdsField,
+    images: ProductImagesField,
   }),
 )
 
@@ -55,12 +82,6 @@ export const ProductListQuery = t.Object({
 // Urun ID path param semasi
 export const ProductIdParam = t.Object({
   id: t.String({ minLength: 1 }),
-})
-
-// Urun + fotograf ID path param semasi
-export const ProductImageParam = t.Object({
-  id: t.String({ minLength: 1 }),
-  imageId: t.String({ minLength: 1 }),
 })
 
 // Urun fotografi yanit semasi
@@ -124,28 +145,4 @@ export const ProductListResponse = t.Object({
     total: t.Integer(),
     pages: t.Integer(),
   }),
-})
-
-// Fotograf yukleme icin ortak dosya kurallari
-const productImageFileOptions = {
-  type: [...ALLOWED_IMAGE_MIMES],
-  maxSize: '5m' as const,
-}
-
-// Coklu fotograf yukleme body semasi (multipart/form-data, field: images)
-export const UploadProductImagesBody = t.Object({
-  images: t.Union([
-    t.File(productImageFileOptions),
-    t.Files({
-      ...productImageFileOptions,
-      minItems: 1,
-      maxItems: MAX_IMAGES_PER_PRODUCT,
-    }),
-  ]),
-})
-
-// Coklu fotograf yukleme yanit semasi
-export const UploadProductImagesResponse = t.Object({
-  images: t.Array(ProductImageResponse),
-  total: t.Integer(),
 })

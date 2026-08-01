@@ -9,16 +9,6 @@ import {
 import { ERROR_CODES } from '../constants/error-codes'
 import { AppError } from './errors.util'
 
-// Urun adindan URL-dostu slug uretir
-export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-}
-
 // Yuklenen dosyanin public URL'ini olusturur
 export function toPublicFileUrl(relativePath: string): string {
   const normalized = relativePath.replace(/^\/+/, '')

@@ -1,12 +1,10 @@
 import { Elysia, t } from 'elysia'
 import * as authController from '../controllers/auth.controller'
-import { ErrorResponse } from '../dtos/common.dto'
+import { ErrorResponse, MessageResponse } from '../dtos/common.dto'
 import {
   AuthCookieSchema,
   AuthResponse,
-  AuthSessionResponse,
   LoginBody,
-  LogoutBody,
   RefreshBody,
   RegisterBody,
   UserResponse,
@@ -51,7 +49,7 @@ export const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
       body: RefreshBody,
       cookie: AuthCookieSchema,
       response: {
-        200: AuthSessionResponse,
+        200: MessageResponse,
         401: ErrorResponse,
         422: ErrorResponse,
       },
@@ -67,10 +65,10 @@ export const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
     ({ body, set, cookie, request, jwt }) =>
       authController.logout({ body, set, cookie, request, jwt }),
     {
-      body: LogoutBody,
+      body: RefreshBody,
       cookie: AuthCookieSchema,
       response: {
-        200: AuthSessionResponse,
+        200: MessageResponse,
         401: ErrorResponse,
       },
       detail: {
