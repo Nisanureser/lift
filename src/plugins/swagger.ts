@@ -11,6 +11,7 @@ export const swaggerPlugin = swagger({
     tags: [
       { name: 'auth', description: 'Kimlik dogrulama islemleri' },
       { name: 'categories', description: 'Urun kategori islemleri' },
+      { name: 'customers', description: 'Bireysel ve kurumsal musteri islemleri' },
       { name: 'products', description: 'Urun katalog islemleri' },
     ],
     components: {
