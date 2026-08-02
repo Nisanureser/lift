@@ -8,6 +8,8 @@
     "start": "bun run src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed": "bun run scripts/seed.ts",
+    "db:fix-units": "bun run scripts/fix-product-units.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },

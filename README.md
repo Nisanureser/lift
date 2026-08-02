@@ -63,6 +63,7 @@ DATABASE_URL=postgres://postgres:postgres@localhost:5432/lift
 ```bash
 bun install
 bun run db:migrate
+bun run db:seed      # opsiyonel: demo veri (test icin)
 ```
 
 ### 4. API
