@@ -15,6 +15,7 @@ export const swaggerPlugin = swagger({
       { name: 'sites', description: 'Musteri tesis / bina islemleri' },
       { name: 'elevators', description: 'Tesis asansor / cihaz islemleri' },
       { name: 'products', description: 'Urun katalog islemleri' },
+      { name: 'orders', description: 'Fabrika malzeme siparis islemleri' },
       { name: 'work-orders', description: 'Saha is emri planlama islemleri' },
       { name: 'service-logs', description: 'Teknisyen servis kayit islemleri' },
       { name: 'service-parts', description: 'Servis parca tuketim islemleri' },
