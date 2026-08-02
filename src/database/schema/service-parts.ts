@@ -15,5 +15,7 @@ export const serviceParts = pgTable('service_parts', {
     .notNull()
     .references(() => products.id, { onDelete: 'restrict' }),
   quantity: numeric('quantity', { precision: 12, scale: 3 }).notNull(),
+  unitPrice: numeric('unit_price', { precision: 12, scale: 2 }),
+  lineTotal: numeric('line_total', { precision: 12, scale: 2 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })

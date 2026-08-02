@@ -4,6 +4,7 @@ import { ErrorResponse } from '../dtos/common.dto'
 import {
   CompleteWorkOrderBody,
   CompleteWorkOrderResponse,
+  ServiceLogResponse,
 } from '../dtos/service-log.dto'
 import {
   CreateWorkOrderBody,
@@ -102,6 +103,19 @@ export const workOrderRoutes = new Elysia({ prefix: '/work-orders', tags: ['work
     detail: {
       summary: '/work-orders/:id/complete',
       description: 'Is emrini tamamlar ve servis kaydi olusturur.',
+      security: authSecurity,
+    },
+  })
+  .get('/:id/service-log', workOrderController.getServiceLog, {
+    params: WorkOrderIdParam,
+    response: {
+      200: ServiceLogResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+    },
+    detail: {
+      summary: '/work-orders/:id/service-log',
+      description: 'Is emrine bagli servis kaydini malzeme ve masraf detaylariyla dondurur.',
       security: authSecurity,
     },
   })

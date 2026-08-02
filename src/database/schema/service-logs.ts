@@ -1,4 +1,4 @@
-import { jsonb, pgTable, text, timestamp, varchar } from 'drizzle-orm/pg-core'
+import { jsonb, numeric, pgTable, text, timestamp, varchar } from 'drizzle-orm/pg-core'
 import { createId } from '@paralleldrive/cuid2'
 import { elevators } from './elevators'
 import { users } from './users'
@@ -22,6 +22,11 @@ export const serviceLogs = pgTable('service_logs', {
   checklist: jsonb('checklist'),
   result: varchar('result', { length: 20 }).notNull().default('ok'),
   followUpNotes: text('follow_up_notes'),
+  laborCost: numeric('labor_cost', { precision: 12, scale: 2 }).notNull().default('0'),
+  travelCost: numeric('travel_cost', { precision: 12, scale: 2 }).notNull().default('0'),
+  materialsTotal: numeric('materials_total', { precision: 12, scale: 2 }).notNull().default('0'),
+  expensesTotal: numeric('expenses_total', { precision: 12, scale: 2 }).notNull().default('0'),
+  totalCost: numeric('total_cost', { precision: 12, scale: 2 }).notNull().default('0'),
   createdBy: varchar('created_by', { length: 128 }).references(() => users.id, {
     onDelete: 'set null',
   }),

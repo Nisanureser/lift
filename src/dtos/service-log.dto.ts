@@ -14,6 +14,12 @@ export const ServicePartInput = t.Object({
   quantity: t.String({ minLength: 1 }),
 })
 
+// Servis kaydi diger masraf satiri semasi
+export const ServiceExpenseInput = t.Object({
+  label: t.String({ minLength: 1 }),
+  amount: t.String({ minLength: 1 }),
+})
+
 // Servis kaydi olusturma body semasi
 export const CreateServiceLogBody = t.Object({
   elevatorId: t.String({ minLength: 1 }),
@@ -25,7 +31,10 @@ export const CreateServiceLogBody = t.Object({
   checklist: t.Optional(t.Any()),
   result: t.Optional(ServiceLogResultSchema),
   followUpNotes: t.Optional(t.String({ minLength: 1 })),
+  laborCost: t.Optional(t.String({ minLength: 1 })),
+  travelCost: t.Optional(t.String({ minLength: 1 })),
   parts: t.Optional(t.Array(ServicePartInput)),
+  expenses: t.Optional(t.Array(ServiceExpenseInput)),
 })
 
 // Is emri tamamlama body semasi
@@ -37,7 +46,10 @@ export const CompleteWorkOrderBody = t.Object({
   checklist: t.Optional(t.Any()),
   result: t.Optional(ServiceLogResultSchema),
   followUpNotes: t.Optional(t.String({ minLength: 1 })),
+  laborCost: t.Optional(t.String({ minLength: 1 })),
+  travelCost: t.Optional(t.String({ minLength: 1 })),
   parts: t.Optional(t.Array(ServicePartInput)),
+  expenses: t.Optional(t.Array(ServiceExpenseInput)),
 })
 
 // Servis kaydi guncelleme body semasi
@@ -88,6 +100,15 @@ const ServicePartResponse = t.Object({
   productName: t.String(),
   productSku: t.String(),
   quantity: t.String(),
+  unitPrice: t.Nullable(t.String()),
+  lineTotal: t.Nullable(t.String()),
+  createdAt: t.Date(),
+})
+
+const ServiceExpenseResponse = t.Object({
+  id: t.String(),
+  label: t.String(),
+  amount: t.String(),
   createdAt: t.Date(),
 })
 
@@ -102,11 +123,17 @@ export const ServiceLogResponse = t.Object({
   checklist: t.Nullable(t.Any()),
   result: t.String(),
   followUpNotes: t.Nullable(t.String()),
+  laborCost: t.String(),
+  travelCost: t.String(),
+  materialsTotal: t.String(),
+  expensesTotal: t.String(),
+  totalCost: t.String(),
   createdBy: t.Nullable(t.String()),
   createdAt: t.Date(),
   updatedAt: t.Date(),
   photos: t.Array(ServiceLogPhotoResponse),
   parts: t.Array(ServicePartResponse),
+  expenses: t.Array(ServiceExpenseResponse),
 })
 
 export const ServiceLogListResponse = t.Object({

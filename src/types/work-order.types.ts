@@ -69,6 +69,15 @@ export type ServicePartDto = {
   productName: string
   productSku: string
   quantity: string
+  unitPrice: string | null
+  lineTotal: string | null
+  createdAt: Date
+}
+
+export type ServiceExpenseDto = {
+  id: string
+  label: string
+  amount: string
   createdAt: Date
 }
 
@@ -83,11 +92,17 @@ export type ServiceLogDto = {
   checklist: unknown | null
   result: string
   followUpNotes: string | null
+  laborCost: string
+  travelCost: string
+  materialsTotal: string
+  expensesTotal: string
+  totalCost: string
   createdBy: string | null
   createdAt: Date
   updatedAt: Date
   photos: ServiceLogPhotoDto[]
   parts: ServicePartDto[]
+  expenses: ServiceExpenseDto[]
 }
 
 export type CreateContractInput = typeof CreateContractBody.static
@@ -113,4 +128,9 @@ export type ContractDto = {
 export type ServicePartInputItem = {
   productId: string
   quantity: string
+}
+
+export type ServiceExpenseInputItem = {
+  label: string
+  amount: string
 }

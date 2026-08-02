@@ -13,7 +13,9 @@ import {
   updateWorkOrder,
   updateWorkOrderStatus,
 } from '../services/work-order.service'
-import { completeWorkOrder } from '../services/service-log.service'
+import { completeWorkOrder, getServiceLogByWorkOrderId } from '../services/service-log.service'
+import { AppError } from '../utils/errors.util'
+import { ERROR_CODES } from '../constants/error-codes'
 import { runController } from '../utils/controller.util'
 import type { WorkOrderStatus } from '../constants/work-order.constants'
 
@@ -95,6 +97,25 @@ export async function complete({
   set: { status?: number | string }
 }) {
   return runController(set, async () => completeWorkOrder(params.id, body, user.id))
+}
+
+// Is emrine bagli servis kaydini getirir
+export async function getServiceLog({
+  params,
+  set,
+}: {
+  params: { id: string }
+  set: { status?: number | string }
+}) {
+  return runController(set, async () => {
+    const serviceLog = await getServiceLogByWorkOrderId(params.id)
+
+    if (!serviceLog) {
+      throw new AppError('Service log not found', 404, ERROR_CODES.SERVICE_LOG_NOT_FOUND)
+    }
+
+    return serviceLog
+  })
 }
 
 // Is emrini soft delete ile siler

@@ -13,6 +13,7 @@ import { workOrders } from './work-orders'
 import { serviceLogs } from './service-logs'
 import { serviceLogPhotos } from './service-log-photos'
 import { serviceParts } from './service-parts'
+import { serviceExpenses } from './service-expenses'
 
 // Tum Drizzle tablolarini tek noktadan export eder (migration ve sorgular icin)
 export const schema = {
@@ -31,6 +32,7 @@ export const schema = {
   serviceLogs,
   serviceLogPhotos,
   serviceParts,
+  serviceExpenses,
 } as const
 
 export {
@@ -49,4 +51,5 @@ export {
   serviceLogs,
   serviceLogPhotos,
   serviceParts,
+  serviceExpenses,
 }
