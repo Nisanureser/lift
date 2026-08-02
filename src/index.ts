@@ -8,9 +8,19 @@ import { swaggerPlugin } from './plugins/swagger'
 import { apiRoutes } from './routes'
 import { ensureStorageBucket, getObjectBytes } from './services/storage.service'
 import { AppError, toErrorResponse } from './utils/errors.util'
+import { databaseUnavailableResponse, isDatabaseConnectionError } from './utils/db-error.util'
 import { sanitizeObjectKey } from './utils/file.util'
 
 validateEnv()
+
+try {
+  await db.execute(sql`SELECT 1`)
+} catch (error) {
+  console.error('PostgreSQL baglantisi kurulamadi. DATABASE_URL ve docker compose kontrol et.')
+  console.error(error)
+  process.exit(1)
+}
+
 await ensureStorageBucket()
 
 // Lift API ana uygulama instance'i; plugin ve route'lari birlestirir
@@ -65,6 +75,12 @@ const app = new Elysia()
   .onError(({ code, error, set }) => {
     if (error instanceof AppError) {
       const { status, body } = toErrorResponse(error)
+      set.status = status
+      return body
+    }
+
+    if (isDatabaseConnectionError(error)) {
+      const { status, body } = databaseUnavailableResponse()
       set.status = status
       return body
     }
