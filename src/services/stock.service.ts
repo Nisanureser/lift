@@ -19,6 +19,13 @@ type StockChangeInput = {
   note?: string
 }
 
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
+
+export type StockOutBatchItem = {
+  productId: string
+  quantity: number
+}
+
 // Stok miktarini DB'ye yazilacak formata cevirir
 function toStockString(value: number): string {
   return value.toFixed(3)
@@ -58,66 +65,112 @@ export function parseStockQuantity(value: string, options?: { allowZero?: boolea
   return num
 }
 
-// Urun stogunu gunceller ve hareket kaydi olusturur
-async function applyStockChange(input: StockChangeInput): Promise<StockMovementDto> {
-  return db.transaction(async (tx) => {
-    const [product] = await tx
-      .select()
-      .from(products)
-      .where(eq(products.id, input.productId))
-      .for('update')
+// Urun stogunu gunceller ve hareket kaydi olusturur (mevcut transaction icinde)
+async function applyStockChangeInTransaction(
+  tx: DbTransaction,
+  input: StockChangeInput,
+): Promise<StockMovementDto> {
+  const [product] = await tx
+    .select()
+    .from(products)
+    .where(eq(products.id, input.productId))
+    .for('update')
 
-    if (!product) {
-      throw new AppError('Product not found', 404, ERROR_CODES.PRODUCT_NOT_FOUND)
-    }
+  if (!product) {
+    throw new AppError('Product not found', 404, ERROR_CODES.PRODUCT_NOT_FOUND)
+  }
 
-    const previousStock = Number(product.stockQuantity)
-    let newStock = previousStock
-    let movementQuantity = input.quantity
+  const previousStock = Number(product.stockQuantity)
+  let newStock = previousStock
+  let movementQuantity = input.quantity
 
-    if (input.type === STOCK_MOVEMENT_TYPES.IN) {
-      newStock = previousStock + input.quantity
-    } else if (input.type === STOCK_MOVEMENT_TYPES.OUT) {
-      if (previousStock < input.quantity) {
-        throw new AppError('Insufficient stock', 422, ERROR_CODES.INSUFFICIENT_STOCK)
-      }
-      newStock = previousStock - input.quantity
-    } else if (input.type === STOCK_MOVEMENT_TYPES.ADJUSTMENT) {
-      movementQuantity = Math.abs(input.quantity - previousStock)
-      newStock = input.quantity
-    }
-
-    if (newStock < 0) {
+  if (input.type === STOCK_MOVEMENT_TYPES.IN) {
+    newStock = previousStock + input.quantity
+  } else if (input.type === STOCK_MOVEMENT_TYPES.OUT) {
+    if (previousStock < input.quantity) {
       throw new AppError('Insufficient stock', 422, ERROR_CODES.INSUFFICIENT_STOCK)
     }
+    newStock = previousStock - input.quantity
+  } else if (input.type === STOCK_MOVEMENT_TYPES.ADJUSTMENT) {
+    movementQuantity = Math.abs(input.quantity - previousStock)
+    newStock = input.quantity
+  }
 
-    await tx
-      .update(products)
-      .set({
-        stockQuantity: toStockString(newStock),
-        updatedAt: new Date(),
-      })
-      .where(eq(products.id, input.productId))
+  if (newStock < 0) {
+    throw new AppError('Insufficient stock', 422, ERROR_CODES.INSUFFICIENT_STOCK)
+  }
 
-    const [movement] = await tx
-      .insert(stockMovements)
-      .values({
-        productId: input.productId,
-        type: input.type,
-        quantity: toStockString(movementQuantity),
-        previousStock: toStockString(previousStock),
-        newStock: toStockString(newStock),
-        note: input.note ?? null,
-        createdBy: input.userId,
-      })
-      .returning()
+  await tx
+    .update(products)
+    .set({
+      stockQuantity: toStockString(newStock),
+      updatedAt: new Date(),
+    })
+    .where(eq(products.id, input.productId))
 
-    if (!movement) {
-      throw new AppError('Failed to record stock movement', 500, ERROR_CODES.STOCK_MOVEMENT_FAILED)
-    }
+  const [movement] = await tx
+    .insert(stockMovements)
+    .values({
+      productId: input.productId,
+      type: input.type,
+      quantity: toStockString(movementQuantity),
+      previousStock: toStockString(previousStock),
+      newStock: toStockString(newStock),
+      note: input.note ?? null,
+      createdBy: input.userId,
+    })
+    .returning()
 
-    return toMovementDto(movement)
+  if (!movement) {
+    throw new AppError('Failed to record stock movement', 500, ERROR_CODES.STOCK_MOVEMENT_FAILED)
+  }
+
+  return toMovementDto(movement)
+}
+
+// Urun stogunu gunceller ve hareket kaydi olusturur
+async function applyStockChange(input: StockChangeInput): Promise<StockMovementDto> {
+  return db.transaction(async (tx) => applyStockChangeInTransaction(tx, input))
+}
+
+// Mevcut transaction icinde stok cikisi yapar
+export async function stockOutInTransaction(
+  tx: DbTransaction,
+  productId: string,
+  quantity: number,
+  userId: string,
+  note?: string,
+): Promise<StockMovementDto> {
+  return applyStockChangeInTransaction(tx, {
+    productId,
+    type: STOCK_MOVEMENT_TYPES.OUT,
+    quantity,
+    userId,
+    note,
   })
+}
+
+// Birden fazla urun icin stok cikisi yapar (servis parca tuketimi)
+export async function stockOutBatchInTransaction(
+  tx: DbTransaction,
+  items: StockOutBatchItem[],
+  userId: string,
+  notePrefix: string,
+): Promise<StockMovementDto[]> {
+  const movements: StockMovementDto[] = []
+
+  for (const item of items) {
+    const movement = await applyStockChangeInTransaction(tx, {
+      productId: item.productId,
+      type: STOCK_MOVEMENT_TYPES.OUT,
+      quantity: item.quantity,
+      userId,
+      note: notePrefix,
+    })
+    movements.push(movement)
+  }
+
+  return movements
 }
 
 // Stok girisi yapar

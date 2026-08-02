@@ -11,6 +11,7 @@ Bun + Elysia + PostgreSQL + Drizzle ORM + MinIO.
 - Kullanici kayit ve giris (cookie tabanli oturum)
 - Urun kategorileri
 - Bireysel ve kurumsal musteriler
+- Musteri tesis / bina kayitlari
 - Urun katalogu (SKU, fiyat, birim, aciklama)
 - Coklu urun fotografi (MinIO)
 - Stok giris / cikis / duzeltme ve hareket gecmisi
@@ -101,6 +102,8 @@ Detayli modul anlatimlari `docs/` klasorunde. Her dosyada once sade dilde ozet, 
 | Giris / kayit | [docs/AUTH.md](./docs/AUTH.md) |
 | Kategoriler | [docs/CATEGORIES.md](./docs/CATEGORIES.md) |
 | Musteriler | [docs/CUSTOMERS.md](./docs/CUSTOMERS.md) |
+| Tesisler | [docs/SITES.md](./docs/SITES.md) |
+| Yol haritasi (tesis, asansor, ziyaret) | [docs/ROADMAP.md](./docs/ROADMAP.md) |
 | Urunler ve fotograflar | [docs/PRODUCTS.md](./docs/PRODUCTS.md) |
 | Stok | [docs/STOCK.md](./docs/STOCK.md) |
 | MinIO depolama | [docs/STORAGE.md](./docs/STORAGE.md) |

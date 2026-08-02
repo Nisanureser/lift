@@ -95,6 +95,21 @@ export async function getElevatorForSiteOrThrow(
   return elevator
 }
 
+// ID ile asansor bulur; yoksa 404 firlatir
+export async function getElevatorOrThrow(elevatorId: string): Promise<typeof elevators.$inferSelect> {
+  const [elevator] = await db
+    .select()
+    .from(elevators)
+    .where(and(eq(elevators.id, elevatorId), notDeleted(elevators.deletedAt)))
+    .limit(1)
+
+  if (!elevator) {
+    throw new AppError('Elevator not found', 404, ERROR_CODES.ELEVATOR_NOT_FOUND)
+  }
+
+  return elevator
+}
+
 // Tesise yeni asansor ekler
 export async function createElevator(
   customerId: string,

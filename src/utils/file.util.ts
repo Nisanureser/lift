@@ -12,6 +12,11 @@ export function buildProductObjectKey(productId: string, fileName: string): stri
   return `products/${productId}/${fileName}`
 }
 
+// S3 object key icin servis kaydi fotograf yolunu olusturur
+export function buildServiceLogObjectKey(serviceLogId: string, fileName: string): string {
+  return `service-logs/${serviceLogId}/${fileName}`
+}
+
 // Proxy uzerinden erisilecek public URL'i olusturur
 export function toPublicFileUrl(objectKey: string): string {
   const normalized = objectKey.replace(/^\/+/, '')

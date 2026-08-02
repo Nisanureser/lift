@@ -57,6 +57,13 @@
       "when": 1785594000000,
       "tag": "0008_soft_delete_elevators",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785597600000,
+      "tag": "0009_work_orders_service_contracts",
+      "breakpoints": true
     }
   ]
 }

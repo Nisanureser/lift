@@ -25,7 +25,7 @@ Tum route'lar `authGuard` arkasinda.
 | POST | `/customers/:id/sites` | Yeni tesis ekle |
 | GET | `/customers/:id/sites/:siteId` | Tesis detayi |
 | PATCH | `/customers/:id/sites/:siteId` | Tesis guncelle |
-| DELETE | `/customers/:id/sites/:siteId` | Tesis sil (204) |
+| DELETE | `/customers/:id/sites/:siteId` | Tesis soft delete (204); bagli asansorler de soft delete |
 
 ### Liste query
 
@@ -58,7 +58,13 @@ GET /customers/{musteri-id}/sites?page=1&limit=20&search=kadikoy&isActive=true
 
 ### Musteri silme
 
-Musteriye bagli tesis varsa `DELETE /customers/:id` → **409** (`CUSTOMER_HAS_SITES`).
+Musteriye bagli **silinmemis** tesis varsa `DELETE /customers/:id` → **409** (`CUSTOMER_HAS_SITES`).
+
+### Soft delete
+
+- Tesis silme (`DELETE`) kaydi veritabanindan kaldirmaz; `deleted_at` set eder.
+- Tesis silinince o tesise bagli tum asansorler de soft delete olur.
+- Silinmis tesisler listelerde ve detay sorgularinda gorunmez.
 
 ### Hata kodlari
 

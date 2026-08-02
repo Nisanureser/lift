@@ -1,6 +1,8 @@
 import { Elysia, t } from 'elysia'
 import * as customerController from '../controllers/customer.controller'
+import * as contractController from '../controllers/contract.controller'
 import * as elevatorController from '../controllers/elevator.controller'
+import * as serviceLogController from '../controllers/service-log.controller'
 import * as siteController from '../controllers/site.controller'
 import { ErrorResponse } from '../dtos/common.dto'
 import {
@@ -27,6 +29,15 @@ import {
   ElevatorResponse,
   UpdateElevatorBody,
 } from '../dtos/elevator.dto'
+import {
+  ContractListQuery,
+  ContractListResponse,
+  ContractResponse,
+  CreateContractBody,
+  CustomerContractParams,
+  UpdateContractBody,
+} from '../dtos/contract.dto'
+import { ServiceLogListQuery, ServiceLogListResponse } from '../dtos/service-log.dto'
 import { authGuard } from '../middlewares/auth.middleware'
 
 const authSecurity = [{ bearerAuth: [] }, { cookieAuth: [] }] as Array<Record<string, string[]>>
@@ -210,6 +221,96 @@ export const customerRoutes = new Elysia({ prefix: '/customers', tags: ['custome
       description: 'Asansoru soft delete ile siler. Giris gerekli.',
       security: authSecurity,
       tags: ['elevators'],
+    },
+  })
+  .get('/:id/sites/:siteId/elevators/:elevatorId/history', serviceLogController.listHistory, {
+    params: CustomerSiteElevatorParams,
+    query: ServiceLogListQuery,
+    response: {
+      200: ServiceLogListResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/sites/:siteId/elevators/:elevatorId/history',
+      description: 'Asansor servis gecmisini listeler. Giris gerekli.',
+      security: authSecurity,
+      tags: ['service-logs'],
+    },
+  })
+  .get('/:id/contracts', contractController.list, {
+    params: CustomerIdParam,
+    query: ContractListQuery,
+    response: {
+      200: ContractListResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/contracts',
+      description: 'Musteri sozlesmelerini listeler. Giris gerekli.',
+      security: authSecurity,
+      tags: ['contracts'],
+    },
+  })
+  .post('/:id/contracts', contractController.create, {
+    params: CustomerIdParam,
+    body: CreateContractBody,
+    response: {
+      201: ContractResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+      422: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/contracts',
+      description: 'Musteriye yeni sozlesme ekler. Giris gerekli.',
+      security: authSecurity,
+      tags: ['contracts'],
+    },
+  })
+  .get('/:id/contracts/:contractId', contractController.getById, {
+    params: CustomerContractParams,
+    response: {
+      200: ContractResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/contracts/:contractId',
+      description: 'Sozlesme detayini dondurur. Giris gerekli.',
+      security: authSecurity,
+      tags: ['contracts'],
+    },
+  })
+  .patch('/:id/contracts/:contractId', contractController.update, {
+    params: CustomerContractParams,
+    body: UpdateContractBody,
+    response: {
+      200: ContractResponse,
+      401: ErrorResponse,
+      404: ErrorResponse,
+      422: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/contracts/:contractId',
+      description: 'Sozlesmeyi gunceller. Giris gerekli.',
+      security: authSecurity,
+      tags: ['contracts'],
+    },
+  })
+  .delete('/:id/contracts/:contractId', contractController.remove, {
+    params: CustomerContractParams,
+    response: {
+      204: t.Void(),
+      401: ErrorResponse,
+      404: ErrorResponse,
+    },
+    detail: {
+      summary: '/customers/:id/contracts/:contractId',
+      description: 'Sozlesmeyi soft delete ile siler. Giris gerekli.',
+      security: authSecurity,
+      tags: ['contracts'],
     },
   })
   .get('/:id', customerController.getById, {

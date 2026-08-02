@@ -8,6 +8,11 @@ import { stockMovements } from './stock-movements'
 import { customers } from './customers'
 import { sites } from './sites'
 import { elevators } from './elevators'
+import { contracts } from './contracts'
+import { workOrders } from './work-orders'
+import { serviceLogs } from './service-logs'
+import { serviceLogPhotos } from './service-log-photos'
+import { serviceParts } from './service-parts'
 
 // Tum Drizzle tablolarini tek noktadan export eder (migration ve sorgular icin)
 export const schema = {
@@ -21,6 +26,11 @@ export const schema = {
   customers,
   sites,
   elevators,
+  contracts,
+  workOrders,
+  serviceLogs,
+  serviceLogPhotos,
+  serviceParts,
 } as const
 
 export {
@@ -34,4 +44,9 @@ export {
   customers,
   sites,
   elevators,
+  contracts,
+  workOrders,
+  serviceLogs,
+  serviceLogPhotos,
+  serviceParts,
 }

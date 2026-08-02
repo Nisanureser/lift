@@ -90,6 +90,11 @@ GET /customers?page=1&limit=20&type=individual&search=ahmet&isActive=true
 - Bireysel kayda kurumsal alan, kurumsal kayda bireysel alan gonderilirse **422**
 - Bos string (`""`) gonderilen opsiyonel alanlar `null` yapilir
 
+### Silme (soft delete)
+
+- `DELETE /customers/:id` kaydi veritabanindan kaldirmaz; `deleted_at` set eder.
+- Bagli **silinmemis** tesis varsa **409** (`CUSTOMER_HAS_SITES`).
+
 ### Hata kodlari
 
 | Kod | Durum |
@@ -99,6 +104,7 @@ GET /customers?page=1&limit=20&type=individual&search=ahmet&isActive=true
 | `TAX_NUMBER_EXISTS` | 409 |
 | `CUSTOMER_TYPE_IMMUTABLE` | 422 |
 | `INVALID_CUSTOMER_TYPE` | 422 |
+| `CUSTOMER_HAS_SITES` | 409 |
 
 ### Veritabani (`customers`)
 
